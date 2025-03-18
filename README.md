@@ -24,12 +24,12 @@
         <tr>
           <td align="center" style="width: 50%; padding: 5px;">
             <a href="https://github.com/anuraghazra/github-readme-stats">
-              <img src="https://github-readme-stats.vercel.app/api?username=scryst&show_icons=true&theme=gruvbox" alt="GitHub Stats" height="150">
+              <img src="https://github-readme-stats.vercel.app/api?username=scryst&show_icons=true&theme=gruvbox" alt="GitHub Stats" height="150" style="border: none;">
             </a>
           </td>
           <td align="center" style="width: 50%; padding: 5px;">
             <a href="https://github.com/anuraghazra/github-readme-stats">
-              <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=scryst&layout=compact&theme=gruvbox" alt="Top Languages" height="150">
+              <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=scryst&layout=compact&theme=gruvbox" alt="Top Languages" height="150" style="border: none;">
             </a>
           </td>
         </tr>
@@ -39,18 +39,18 @@
   <tr>
     <td align="center" style="padding-top: 10px; padding-bottom: 10px;">
       <a href="https://github.com/scryst">
-        <img width="75%" src="https://activity-graph.vercel.app/graph?username=scryst&theme=gruvbox&hide_border=true" alt="GitHub Activity Graph">
+        <img width="75%" src="https://activity-graph.vercel.app/graph?username=scryst&theme=gruvbox&hide_border=true" alt="GitHub Activity Graph" style="border: none;">
       </a>
     </td>
   </tr>
   <tr>
     <td align="center" style="padding-top: 10px;">
       <a href="https://lak5.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-        <img src="https://img.shields.io/badge/lak5.com-%23333?style=for-the-badge&logo=web&logoColor=white" alt="lak5.com">
+        <img src="https://img.shields.io/badge/lak5.com-%23333?style=for-the-badge&logo=web&logoColor=white" alt="lak5.com" style="border: none;">
       </a>
       &nbsp;
       <a href="https://coffeechatventures.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
-        <img src="https://img.shields.io/badge/coffeechatventures.com-%23333?style=for-the-badge&logo=web&logoColor=white" alt="coffeechatventures.com">
+        <img src="https://img.shields.io/badge/coffeechatventures.com-%23333?style=for-the-badge&logo=web&logoColor=white" alt="coffeechatventures.com" style="border: none;">
       </a>
     </td>
   </tr>
