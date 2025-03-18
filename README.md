@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://komarev.com/ghpvc/?username=scryst&style=for-the-badge&label=Views&color=555">
-    <img src="https://komarev.com/ghpvc/?username=scryst&style=for-the-badge&label=Views&color=555" alt="Profile Views">
+  <a href="https://komarev.com/ghpvc/?username=scryst&style=for-the-badge&label=Views&color=6c757d">
+    <img src="https://komarev.com/ghpvc/?username=scryst&style=for-the-badge&label=Views&color=6c757d" alt="Profile Views">
   </a>
 </p>
 
@@ -16,10 +16,11 @@
 
 <div align="center">
   <a href="https://github.com/anuraghazra/github-readme-stats">
-    <img width="48%" src="https://github-readme-stats.vercel.app/api?username=scryst&show_icons=true&theme=gruvbox" alt="GitHub Stats">
+    <img height="150" src="https://github-readme-stats.vercel.app/api?username=scryst&show_icons=true&theme=gruvbox" alt="GitHub Stats">
   </a>
+  &nbsp;&nbsp;
   <a href="https://github.com/anuraghazra/github-readme-stats">
-    <img width="48%" src="https://github-readme-stats.vercel.app/api/top-langs/?username=scryst&layout=compact&theme=gruvbox" alt="Top Languages">
+    <img height="150" src="https://github-readme-stats.vercel.app/api/top-langs/?username=scryst&layout=compact&theme=gruvbox" alt="Top Languages">
   </a>
 </div>
 
@@ -30,11 +31,11 @@
 </div>
 
 <div align="center">
-  <a href="https://lak5.com" target="_blank" rel="noopener noreferrer">
+  <a href="https://lak5.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
     <img src="https://img.shields.io/badge/lak5.com-%23333?style=for-the-badge&logo=web&logoColor=white" alt="lak5.com">
   </a>
   &nbsp;
-  <a href="https://coffeechatventures.com" target="_blank" rel="noopener noreferrer">
+  <a href="https://coffeechatventures.com" target="_blank" rel="noopener noreferrer" style="text-decoration: none;">
     <img src="https://img.shields.io/badge/coffeechatventures.com-%23333?style=for-the-badge&logo=web&logoColor=white" alt="coffeechatventures.com">
   </a>
 </div>
