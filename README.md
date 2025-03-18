@@ -2,20 +2,20 @@
   <tr>
     <td align="center">
       <a href="https://github.com/scryst">
-        <img src="https://avatars.githubusercontent.com/u/93604547?v=4&size=100" alt="Your GitHub Avatar" width="100" height="100" style="border-radius: 50%;">
+        <img src="https://avatars.githubusercontent.com/u/93604547?v=4&size=100" alt="Your GitHub Avatar" width="100" height="100" style="border-radius: 50%; outline: none;">
       </a>
     </td>
   </tr>
   <tr>
     <td align="center" style="padding-bottom: 10px;">
       <a href="https://komarev.com/ghpvc/?username=scryst&style=for-the-badge&label=Views&color=6c757d">
-        <img src="https://komarev.com/ghpvc/?username=scryst&style=for-the-badge&label=Views&color=6c757d" alt="Profile Views">
+        <img src="https://komarev.com/ghpvc/?username=scryst&style=for-the-badge&label=Views&color=6c757d" alt="Profile Views" style="outline: none;">
       </a>
     </td>
   </tr>
   <tr>
     <td align="center" style="padding-top: 10px; padding-bottom: 10px;">
-      <img src="https://skillicons.dev/icons?i=py,js,react,git,html,css,nodejs,express&perline=8" alt="Skills" width="80%">
+      <img src="https://skillicons.dev/icons?i=py,js,react,git,html,css,nodejs,express&perline=8" alt="Skills" width="80%" style="outline: none;">
     </td>
   </tr>
   <tr>
@@ -39,7 +39,7 @@
   <tr>
     <td align="center" style="padding-top: 10px; padding-bottom: 10px;">
       <a href="https://github.com/scryst">
-        <img width="75%" src="https://activity-graph.vercel.app/graph?username=scryst&theme=gruvbox&hide_border=true" alt="GitHub Activity Graph" style="border: none;">
+        <img width="75%" src="https://activity-graph.vercel.app/graph?username=scryst&theme=gruvbox&hide_border=true" alt="GitHub Activity Graph" style="outline: none;">
       </a>
     </td>
   </tr>
@@ -55,3 +55,14 @@
     </td>
   </tr>
 </table>
+
+<style>
+  table {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  td {
+    padding-left: 15px; /* Adjust as needed */
+    padding-right: 15px; /* Adjust as needed */
+  }
+</style>
