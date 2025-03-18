@@ -1,13 +1,11 @@
 <p align="center">
-  <a href="https://github.com/scryst">
-    <img src="https://avatars.githubusercontent.com/u/YOUR_GITHUB_ID?v=4" width="120" height="120" alt="Your GitHub Avatar" style="border-radius: 50%;">
-  </a>
+  <img src="https://avatars.githubusercontent.com/u/93604547?v=4&size=64" alt="Your GitHub Avatar" style="border-radius: 50%;">
 </p>
 
-<h3 align="center" style="color:#8B4513;">Cultivating Digital Creations ☕🌿</h3>
+<h3 align="center" style="color:#8B4513;">Cultivating Digital Life ☕🌿</h3>
 
 <p align="center" style="color:#556B2F;">
-  Growing ideas and code, step by step.
+  Growing code, branch by branch.
 </p>
 
 <p align="center">
@@ -20,9 +18,23 @@
 
 <br>
 
-<p align="center">
-  <img src="https://i.imgur.com/k41Zj9V.gif" alt="Growing Tree Animation" width="200">
-</p>
+<pre align="center" style="font-family: monospace;">
+        🌱
+       /|\
+      / | \
+     /  |  \
+    -----
+       |
+       |
+    \  |  /
+     \ | /
+      \|/
+       /\
+      /  \
+     /____\
+      \  /
+       \/
+</pre>
 
 <br>
 
