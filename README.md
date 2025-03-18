@@ -14,15 +14,20 @@
   <img src="https://skillicons.dev/icons?i=py,js,react,git,html,css,nodejs,express&perline=8" alt="Skills" width="80%">
 </div>
 
-<div align="center" style="display: flex; justify-content: center; align-items: center;">
-  <a href="https://github.com/anuraghazra/github-readme-stats">
-    <img src="https://github-readme-stats.vercel.app/api?username=scryst&show_icons=true&theme=gruvbox" alt="GitHub Stats">
-  </a>
-  &nbsp;&nbsp;&nbsp;&nbsp;
-  <a href="https://github.com/anuraghazra/github-readme-stats">
-    <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=scryst&layout=compact&theme=gruvbox" alt="Top Languages">
-  </a>
-</div>
+<table align="center">
+  <tr>
+    <td align="center" valign="middle">
+      <a href="https://github.com/anuraghazra/github-readme-stats">
+        <img src="https://github-readme-stats.vercel.app/api?username=scryst&show_icons=true&theme=gruvbox" alt="GitHub Stats">
+      </a>
+    </td>
+    <td align="center" valign="middle">
+      <a href="https://github.com/anuraghazra/github-readme-stats">
+        <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=scryst&layout=compact&theme=gruvbox" alt="Top Languages">
+      </a>
+    </td>
+  </tr>
+</table>
 
 <div align="center">
   <a href="https://github.com/scryst">
