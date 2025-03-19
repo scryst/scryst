@@ -54,4 +54,20 @@
       </a>
     </td>
   </tr>
+  <tr>
+    <td align="center" style="padding-top: 20px;">
+      <img src="/metrics.terminal.svg" alt="Terminal Metrics" width="100%">
+    </td>
+  </tr>
 </table>
+
+<style>
+  table {
+    margin-left: auto;
+    margin-right: auto;
+  }
+  td {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+</style>
