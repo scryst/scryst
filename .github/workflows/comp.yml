@@ -1,10 +1,13 @@
 name: GitHub Metrics Terminal
+
 on:
   schedule:
     - cron: '0 * * * *' # Runs hourly
   workflow_dispatch: # Allows manual triggering
+
 permissions:
-  contents: write # This is the crucial line
+  contents: write
+
 jobs:
   metrics:
     runs-on: ubuntu-latest
@@ -16,13 +19,13 @@ jobs:
           user: scryst # Replace with your GitHub username
           filename: metrics.terminal.svg
           template: terminal
-          base: header, metadata
+          base: header, activity, community, repositories, metadata, lines, languages, stars, people, following, topics, tweets, gists, discussions, projects, achievements, notable, code
+          config_timezone: America/Los_Angeles # Replace with your timezone
           committer_token: ${{ secrets.GITHUB_TOKEN }}
           committer_message: "Update metrics.terminal.svg - [Skip GitHub Action]"
           output_action: commit
           output_condition: always
           optimize: css, xml
-          config_timezone: America/Los_Angeles # Replace with your timezone
           config_display: columns
           config_twemoji: yes
           config_gemoji: yes
