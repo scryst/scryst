@@ -19,18 +19,14 @@ jobs:
           user: scryst # Replace with your GitHub username
           filename: metrics.terminal.svg
           template: terminal
-          base: header, activity, repositories, metadata, stars, projects, code, community, people, following #Removed languages and lines from base.
+          base: header, activity, metadata, stars, projects, code, community, people, following #Removed repositories
           plugin_languages: yes
-          plugin_languages_limit: 20 # Increased limit
-          plugin_languages_details: bytes, percentage, lines #Added lines to detail.
+          plugin_languages_limit: 20
+          plugin_languages_details: bytes, percentage, lines
           plugin_languages_threshold: 0%
           plugin_languages_sections: most-used
           plugin_languages_recent_categories: markup, programming, data, scripting, prose, unknown
           plugin_lines: yes
-          plugin_repositories: yes
-          plugin_repositories_limit: 8 # Adjusted limit
-          plugin_repositories_forks: yes
-          plugin_repositories_stargazers: yes
           plugin_habits: yes
           plugin_habits_from: 365
           plugin_habits_facts: yes
