@@ -2,8 +2,8 @@ name: GitHub Metrics Terminal
 
 on:
   schedule:
-    - cron: '0 * * * *' # Runs hourly
-  workflow_dispatch: # Allows manual triggering
+    - cron: '0 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -19,7 +19,34 @@ jobs:
           user: scryst # Replace with your GitHub username
           filename: metrics.terminal.svg
           template: terminal
-          base: header, activity, community, repositories, metadata, lines, languages, stars, people, following, topics, tweets, gists, discussions, projects, achievements, notable, code
+          base: header, activity, community, repositories, metadata, lines, stars, people, following, topics, gists, discussions, projects, achievements, notable, code, tweets # Added tweets
+          plugins_languages: yes
+          plugins_languages_limit: 20
+          plugins_languages_details: bytes, percentage, lines
+          plugins_languages_threshold: 0%
+          plugins_lines: yes
+          plugins_repositories: yes
+          plugins_repositories_limit: 10
+          plugins_repositories_forks: yes
+          plugins_repositories_stargazers: yes
+          plugins_repositories_affiliations: owner, collaborator, organization
+          plugins_achievements: yes
+          plugins_achievements_threshold: C
+          plugins_achievements_secrets: yes
+          plugins_discussions: yes
+          plugins_discussions_categories: yes
+          plugins_discussions_categories_limit: 10
+          plugins_gists: yes
+          plugins_gists_limit: 10
+          plugins_habits: yes
+          plugins_habits_from: 365 # Increased to 365 days
+          plugins_habits_facts: yes
+          plugins_introduction: yes
+          plugins_introduction_title: "My GitHub Statistics"
+          plugins_topics: yes
+          plugins_topics_limit: 15
+          plugins_topics_mode: mastered
+          plugins_tweets: yes #Enables tweets plugin. Requires external configuration
           config_timezone: America/Los_Angeles # Replace with your timezone
           committer_token: ${{ secrets.GITHUB_TOKEN }}
           committer_message: "Update metrics.terminal.svg - [Skip GitHub Action]"
