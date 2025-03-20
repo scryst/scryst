@@ -20,33 +20,33 @@ jobs:
           filename: metrics.terminal.svg
           template: terminal
           base: header, activity, community, repositories, metadata, lines, stars, people, following, topics, gists, discussions, projects, achievements, notable, code, tweets # Added tweets
-          plugins_languages: yes
-          plugins_languages_limit: 20
-          plugins_languages_details: bytes, percentage, lines
-          plugins_languages_threshold: 0%
-          plugins_lines: yes
-          plugins_repositories: yes
-          plugins_repositories_limit: 10
-          plugins_repositories_forks: yes
-          plugins_repositories_stargazers: yes
-          plugins_repositories_affiliations: owner, collaborator, organization
-          plugins_achievements: yes
-          plugins_achievements_threshold: C
-          plugins_achievements_secrets: yes
-          plugins_discussions: yes
-          plugins_discussions_categories: yes
-          plugins_discussions_categories_limit: 10
-          plugins_gists: yes
-          plugins_gists_limit: 10
-          plugins_habits: yes
-          plugins_habits_from: 365 # Increased to 365 days
-          plugins_habits_facts: yes
-          plugins_introduction: yes
-          plugins_introduction_title: "My GitHub Statistics"
-          plugins_topics: yes
-          plugins_topics_limit: 15
-          plugins_topics_mode: mastered
-          plugins_tweets: yes #Enables tweets plugin. Requires external configuration
+          plugin_languages: yes
+          plugin_languages_limit: 20
+          plugin_languages_details: bytes, percentage, lines
+          plugin_languages_threshold: 0%
+          plugin_lines: yes
+          plugin_repositories: yes
+          plugin_repositories_limit: 10
+          plugin_repositories_forks: yes
+          plugin_repositories_stargazers: yes
+          plugin_repositories_affiliations: owner, collaborator, organization
+          plugin_achievements: yes
+          plugin_achievements_threshold: C
+          plugin_achievements_secrets: yes
+          plugin_discussions: yes
+          plugin_discussions_categories: yes
+          plugin_discussions_categories_limit: 10
+          plugin_gists: yes
+          plugin_gists_limit: 10
+          plugin_habits: yes
+          plugin_habits_from: 365 # Increased to 365 days
+          plugin_habits_facts: yes
+          plugin_introduction: yes
+          plugin_introduction_title: "My GitHub Statistics"
+          plugin_topics: yes
+          plugin_topics_limit: 15
+          plugin_topics_mode: mastered
+          plugin_tweets: yes #Enables tweets plugin. Requires external configuration
           config_timezone: America/Los_Angeles # Replace with your timezone
           committer_token: ${{ secrets.GITHUB_TOKEN }}
           committer_message: "Update metrics.terminal.svg - [Skip GitHub Action]"
