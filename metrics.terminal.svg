@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="480" height="590" class="">
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="732" class="">
   
 
   <defs><style>@font-face {
@@ -37,7 +37,7 @@
 These generated metrics comes with ABSOLUTELY NO
 WARRANTY, to the extent permitted by applicable law.
 
-Last generated: 2 Dec 2025, 01:15:33
+Last generated: 2 Dec 2025, 02:11:49
 </div>
 <div class="stdin"><span class="ps1-path">scryst@metrics</span>:<span class="ps1-location">~</span># whoami</div><div class="stdout"><b>scryst</b> registered=4y, uid=4547, gid=0
   contributed to 42 repositories <b><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span><span style="color:#ebedf0">#</span></b>
@@ -56,10 +56,18 @@ Last generated: 2 Dec 2025, 01:15:33
   <b>   60</b> repositories starred
   <b>   42</b> repositories watched
 </div>
-<div class="stdin"><span class="ps1-path">scryst@metrics</span>:<span class="ps1-location">~</span># locale</div><div class="stdout"></div>
+<div class="stdin"><span class="ps1-path">scryst@metrics</span>:<span class="ps1-location">~</span># locale</div><div class="stdout"><b>JUPYTER NOTEBOOK</b> [###########         ] 51.07%
+<b>TYPESCRIPT  </b> [#####               ] 23.33%
+<b>JAVASCRIPT  </b> [####                ] 19.60%
+<b>PYTHON      </b> [#                   ] 3.17 %
+<b>HTML        </b> [#                   ] 1.44 %
+<b>CSS         </b> [#                   ] 0.58 %
+<b>PLPGSQL     </b> [#                   ] 0.50 %
+<b>SHELL       </b> [#                   ] 0.32 %
+</div>
 
 
-<footer>Connection reset by 140.203.100.253</footer></pre>
+<footer>Connection reset by 144.146.165.23</footer></pre>
 
     </div>
     <div xmlns="http://www.w3.org/1999/xhtml" id="metrics-end"></div>
