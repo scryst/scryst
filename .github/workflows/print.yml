@@ -1,0 +1,30 @@
+name: Print
+
+on:
+  schedule: [{ cron: "*/20 * * * *" }]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [scripts/**, .github/workflows/print.yml]
+
+permissions:
+  contents: write
+
+concurrency: print
+
+jobs:
+  print:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: python3 scripts/garden.py dist
+        env:
+          GH_TOKEN: ${{ secrets.METRICS_TOKEN || github.token }}
+      # One force-pushed commit on `output`, so main's history stays clean.
+      - working-directory: dist
+        run: |
+          git init -q -b output
+          git add garden.svg
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "Print $(date -u +%FT%RZ)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" output
