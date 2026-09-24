@@ -2,28 +2,31 @@
 
   GH_TOKEN=... python3 scripts/garden.py dist/
 
-The page is torn open and a garden is printed behind it. Four drums, as on a
-real riso: yellow, fluorescent pink, blue and black. Every colour in the garden
-is one of those inks or two of them overprinted, and each drum lands a little
-out of register, differently on every print. The torn page is GitHub's own, so
-the print comes in a light and a dark copy.
+The page is torn open on a lake printed behind it, the name written across the
+mountains and mirrored in the water. Four drums, as on a real riso: yellow,
+fluorescent pink, blue and black. Every colour in it is one of those inks or two
+of them overprinted, and each drum lands a little out of register, differently on
+every print. The torn page is GitHub's own, so the print comes in a light and a
+dark copy.
 
 What the picture measures:
-  meadow      one stem per day of the last year, height = contributions that day;
-              the best days flower
-  mountains   weekly totals; snow on the biggest
-  fields      one field per month, brighter and busier for bigger months
-  name        "scryst", drawn by hand as one inked vine growing out of the ground;
-              its leaves are the year's days, left to right, in the season's
-              overprint, and the biggest weeks bloom on it
-  tendril     today: a bud that opens once there is work today
-  ivy         the current streak, one pair of leaves a day, climbing out of the tear
-  petals      this week's work, blowing out through the tear; today's lie on the page
-  butterflies only on days with work, more on bigger days
-  birds       the days worked in the last fortnight
-  sky         the sun, or the moon in its real phase, where it is over Los Angeles
-  wind        quickens when this week outpaces the year and just after a push
-Only aggregate counts and the latest push time are read.
+  ranges   the year's weekly totals in six ranges, the oldest furthest away;
+           a busier stretch stands taller
+  reeds    one stem per day of the last year along the shore, height =
+           contributions that day; the best days go to seed
+  water    today's work, as light glittering under the sun or moon
+  mist     settles in the valleys when the week is quiet, lifts when it is busy
+  birds    the days worked in the last fortnight, leaving through the tear
+  sky      the sun where it is over Los Angeles; by night the moon, in its real phase
+  wind     quickens when this week outpaces the year and just after a push
+  boat     out on the lake within an hour of a push, with a lantern after dark
+  cabin    smoke from the chimney on a day with work in it; from dusk its window
+           is lit for six hours after a push
+  fireworks  over the lake on the night of the year's best day
+The season shows too: larches gold in autumn and green in spring, snow on the
+ranges in winter, fireflies on summer evenings. A heron, rising fish, a plane and
+meteors come and go by chance. Only aggregate counts and the latest push time
+are read.
 """
 import base64
 import datetime as dt
@@ -67,6 +70,23 @@ def tempo(length, phase=0.0):
     return f"--t:{k / FPS:.4f}s;--k:{k};--d:{beat(phase) / FPS:.4f}s"
 
 
+def stepped(name, stops):
+    """@keyframes whose every change lands on the shared clock. A timing function
+    steps within each keyframe segment, not across the loop, so steps(--k) over
+    uneven segments ticks far faster than FPS and redraws the whole image each
+    screen frame. Here each segment steps once a frame, or once if it holds still.
+    `stops` are (frame, declarations); the last frame is the loop's length."""
+    frames = stops[-1][0]
+    at = lambda f: f"{100 * f / frames:.5g}%"
+    segs = "".join(f"{at(f)}{{{css};animation-timing-function:steps({1 if css == nxt else g - f})}}"
+                   for (f, css), (g, nxt) in zip(stops, stops[1:]))
+    return f"@keyframes {name}{{{segs}100%{{{stops[-1][1]}}}}}"
+
+
+# Loop lengths in frames for motions with uneven keyframes, which must be fixed to step on the clock.
+RING, STRIKE, SMOKE, METEOR, FLY, TRAIL, BURST, ROW, FLOCK = 144, 120, 62, 180, 36, 768, 66, 1080, 360
+
+
 def glide(path, length, begin, turn=False):
     """Style that carries a shape along a path on the shared clock. CSS, not SMIL:
     browsers redraw a SMIL motion every screen frame even when it has not moved."""
@@ -81,35 +101,22 @@ PAGE = {
 CX, CY, RX, RY = 640, 372, 580, 314
 FLAPS = [(-2.45, 230, 74), (-.1, 150, 48), (2.66, 130, 50)]   # (angle round the tear, crease length, depth)
 
-# Leaf recipes per month: (drum, tone) pairs overprinted. Winter blue, spring lime,
-# summer deep green, autumn oranges and plums.
-LEAF = {
-    12: [[("blue", .8)], [("blue", .55), ("pink", .15)]],
-    1: [[("blue", .8)], [("blue", .6)]],
-    2: [[("blue", .7), ("yellow", .3)], [("blue", .8)]],
-    3: [[("yellow", 1), ("blue", .35)], [("yellow", .9), ("blue", .25)]],
-    4: [[("yellow", 1), ("blue", .4)], [("yellow", 1), ("blue", .3)]],
-    5: [[("yellow", 1), ("blue", .55)], [("yellow", 1), ("blue", .4)]],
-    6: [[("yellow", 1), ("blue", .75)], [("yellow", 1), ("blue", .6)]],
-    7: [[("yellow", 1), ("blue", .85)], [("yellow", .9), ("blue", 1)]],
-    8: [[("yellow", 1), ("blue", .8)], [("yellow", 1), ("blue", .5)]],
-    9: [[("yellow", 1), ("blue", .5)], [("yellow", 1), ("pink", .45)], [("yellow", 1), ("blue", .7)]],
-    10: [[("yellow", 1), ("pink", .6)], [("yellow", 1), ("pink", .9)], [("pink", .7), ("blue", .35)]],
-    11: [[("pink", .8), ("blue", .35)], [("yellow", 1), ("pink", 1)], [("pink", .6), ("yellow", .6)]],
+LAKE = 510                                        # the far shore
+SIL = [("blue", .95), ("black", .92)]             # a backlit silhouette: near-black, never #000
+# Range inks at the ridge, far (0) to near (5); each thins toward its foot into the valley haze.
+RANGE = {
+    "day": [[("blue", .12), ("pink", .1)], [("blue", .2), ("pink", .12)], [("blue", .32), ("pink", .14)],
+            [("blue", .48), ("pink", .15)], [("blue", .66), ("pink", .14), ("black", .12)], [("blue", .88), ("yellow", .5), ("black", .34)]],
+    "dusk": [[("blue", .1), ("pink", .4)], [("blue", .2), ("pink", .44)], [("blue", .32), ("pink", .46)],
+             [("blue", .48), ("pink", .46), ("black", .06)], [("blue", .68), ("pink", .4), ("black", .2)], [("blue", .95), ("pink", .2), ("black", .72)]],
+    "night": [[("blue", .7), ("black", .16)], [("blue", .76), ("black", .24)], [("blue", .84), ("black", .34)],
+              [("blue", .9), ("black", .46)], [("blue", .96), ("black", .6)], [("blue", 1), ("black", .86)]],
 }
-FLOWER = {m: [("pink", 1)] if m in (3, 4, 5, 9, 10) else [("yellow", 1)] if m in (6, 7, 8) else [("pink", .8), ("blue", .6)]
-          for m in range(1, 13)}
-DEEP = [("blue", .95), ("yellow", .9), ("black", .3)]   # shade green
-# Fields by season: (ground, drum for its furrows or blossom). Frost, lime, green, ochre.
-FIELD = {m: ([("blue", .16)], "blue") if m in (12, 1, 2) else ([("yellow", .8), ("blue", .2)], "pink") if m in (3, 4, 5)
-         else ([("yellow", .9), ("blue", .55)], "blue") if m in (6, 7, 8) else ([("yellow", .85), ("pink", .3)], "pink")
-         for m in range(1, 13)}
-AUTUMN = [[("yellow", 1), ("pink", .5)], [("yellow", .9), ("pink", .3)], [("yellow", 1), ("blue", .25), ("pink", .3)]]
+RIM = {"day": [("yellow", 1), ("pink", .25)], "dusk": [("yellow", 1), ("pink", .6)], "night": [("blue", .5)]}   # light along each ridge
 
-# "scryst" as one cursive vine rooted in the ground: baseline y=0, x-height -100,
-# ascender -176. Drawn by hand.
+# "scryst" in one connected hand: baseline y=0, x-height -100, ascender -176.
 NAME = (
-    "M-66 224 C-58 160 -86 40 -40 12 C-20 10 0 -40 48 -102 C40 -84 30 -66 44 -50 C62 -32 74 -14 60 0 C48 12 20 10 14 -4 "
+    "M-40 12 C-20 10 0 -40 48 -102 C40 -84 30 -66 44 -50 C62 -32 74 -14 60 0 C48 12 20 10 14 -4 "
     "C40 8 70 4 82 -30 C88 -55 94 -80 104 -92 C110 -100 126 -104 128 -94 C129 -86 120 -84 117 -90 "
     "C108 -96 86 -70 86 -40 C86 -12 100 0 116 -2 C134 -4 152 -16 170 -40 C176 -64 182 -92 190 -110 "
     "C194 -100 198 -92 204 -94 C210 -96 214 -100 217 -98 C214 -60 208 -30 214 -4 C218 8 234 2 248 -40 "
@@ -120,7 +127,8 @@ NAME = (
 )
 TENDRIL = "M488 -22 C502 -46 528 -30 518 -10 C510 4 492 -4 498 -16 C502 -24 511 -20 509 -14"
 CROSS = "M416 -108 C438 -112 464 -116 490 -114"
-SCALE, OX, OY = 1.38, 306, 352
+SCALE, OX, OY = 1.0, 392, 352
+REFLECT = .34                                     # the water seen from above: reflections foreshortened
 
 
 # ---------- data ----------
@@ -155,14 +163,6 @@ def gust_period(days, total, last, now):
     return max(3.5, min(14.0, 11 / math.sqrt(max(pace, 0.25)) / (1 + heat)))
 
 
-def streak(counts):
-    """Days in a row with work, not broken by a today that has not started yet."""
-    n, i = 0, len(counts) - 1 - (counts[-1] == 0)
-    while i >= 0 and counts[i]:
-        n, i = n + 1, i - 1
-    return n
-
-
 # ---------- the press ----------
 
 class Press:
@@ -170,49 +170,42 @@ class Press:
 
     Artwork is defined once and placed on each drum by reference. `knock` clears
     paper through every drum first, so a subject prints clean over what is behind it.
-    Two layers: the garden behind the page, and what has got loose in front of it.
     """
 
     def __init__(self):
-        self.layers = {"world": {p: [] for p in INK}, "free": {p: [] for p in INK}}
-        self.over = {"world": [], "free": []}
-        self.layer = "world"
-        self.knocks: tuple[str, ...] = ("yellow", "pink", "blue")   # black joins once it has something to cut
-        self.screens, self.defs, self.keyframes = {}, [], []
+        self.plates = {p: [] for p in INK}
+        self.over = []
+        self.knocks = tuple(INK)
+        self.screens, self.defs = {}, []
 
-    def ink(self, plate, tone, fine=False):
-        """A drum's ink at a tone: solid, or a dot screen. Small things (a leaf, a petal)
-        get a finer screen, or three dots across would read as beads instead of a tint."""
+    def ink(self, plate, tone):
+        """A drum's ink at a tone: solid, or a dot screen."""
         if tone >= 0.97:
             return INK[plate]
-        pid = f"{plate}{round(tone * 100)}{'f' if fine else ''}"
+        pid = f"{plate}{round(tone * 100)}"
         if pid not in self.screens:
-            pitch = 2.7 if fine else 4.6
-            r = pitch * math.sqrt(tone / math.pi)
-            self.screens[pid] = (f'<pattern id="{pid}" width="{pitch}" height="{pitch}" patternUnits="userSpaceOnUse" '
-                                 f'patternTransform="rotate({ANGLE[plate]})"><circle cx="{pitch / 2}" cy="{pitch / 2}" '
+            r = 4.6 * math.sqrt(tone / math.pi)
+            self.screens[pid] = (f'<pattern id="{pid}" width="4.6" height="4.6" patternUnits="userSpaceOnUse" '
+                                 f'patternTransform="rotate({ANGLE[plate]})"><circle cx="2.3" cy="2.3" '
                                  f'r="{r:.2f}" fill="{INK[plate]}"/></pattern>')
         return f"url(#{pid})"
 
-    def texture(self, plate, kind, angle, size=9.0, weight=.35):
-        """Line and dot work drawn by hand across a field: rows, dots or crosshatch."""
-        pid = f"{kind}{plate}{round(angle)}{round(size * 10)}{round(weight * 100)}"
+    def veil(self, tone):
+        """A reverse screen: paper dots knocked through the ink, for thin mist."""
+        pid = f"veil{round(tone * 100)}"
         if pid not in self.screens:
-            c, s = INK[plate], size
-            art = {"rows": f'<rect width="{s}" height="{s * weight:.2f}" fill="{c}"/>',
-                   "dots": f'<circle cx="{s / 2}" cy="{s / 2}" r="{s * weight / 2:.2f}" fill="{c}"/>',
-                   "hatch": f'<rect width="{s}" height="{s * weight / 2:.2f}" fill="{c}"/><rect width="{s * weight / 2:.2f}" height="{s}" fill="{c}"/>'}[kind]
-            self.screens[pid] = (f'<pattern id="{pid}" width="{s}" height="{s}" patternUnits="userSpaceOnUse" '
-                                 f'patternTransform="rotate({angle:.0f})">{art}</pattern>')
+            r = 4.6 * math.sqrt(tone / math.pi)
+            self.screens[pid] = (f'<pattern id="{pid}" width="4.6" height="4.6" patternUnits="userSpaceOnUse" '
+                                 f'patternTransform="rotate(30)"><circle cx="2.3" cy="2.3" r="{r:.2f}" fill="#fff"/></pattern>')
         return f"url(#{pid})"
 
     def raw(self, plate, svg):
-        self.layers[self.layer][plate].append(svg)
+        self.plates[plate].append(svg)
 
     def glow(self, svg):
         """Light laid over every drum, for small bright things that move: a knockout
         would have to move on every drum with them."""
-        self.over[self.layer].append(svg)
+        self.over.append(svg)
 
     def ref(self, svg):
         if svg.startswith("#"):
@@ -220,12 +213,12 @@ class Press:
         self.defs.append(f'<g id="a{len(self.defs)}">{svg}</g>')
         return f"#a{len(self.defs) - 1}"
 
-    def put(self, recipe, svg, knock=True, paint="fill", fine=False):
+    def put(self, recipe, svg, knock=True, paint="fill"):
         ref = self.ref(svg)
         if knock:
             self.clear(ref, paint=paint)
         for plate, tone in recipe:
-            self.raw(plate, f'<use href="{ref}" {paint}="{tone if isinstance(tone, str) else self.ink(plate, tone, fine)}"/>')
+            self.raw(plate, f'<use href="{ref}" {paint}="{self.ink(plate, tone)}"/>')
         return ref
 
     def clear(self, svg, plates=None, paint="fill"):
@@ -239,10 +232,9 @@ class Press:
         for plate in INK:
             reach = 1.0 if plate == "black" else 2.4
             offs[plate] = (rng.uniform(-reach, reach), rng.uniform(-reach, reach))
-        layers = {name: "".join(f'<g transform="translate({offs[p][0]:.1f} {offs[p][1]:.1f})" style="mix-blend-mode:multiply">'
-                                f'{"".join(parts)}</g>' for p, parts in plates.items() if parts) + "".join(self.over[name])
-                  for name, plates in self.layers.items()}
-        return "".join(self.screens.values()) + "".join(self.defs), layers
+        world = "".join(f'<g transform="translate({offs[p][0]:.1f} {offs[p][1]:.1f})" style="mix-blend-mode:multiply">'
+                        f'{"".join(parts)}</g>' for p, parts in self.plates.items() if parts) + "".join(self.over)
+        return "".join(self.screens.values()) + "".join(self.defs), world
 
 
 # ---------- geometry ----------
@@ -339,28 +331,6 @@ def poly(pts, close=True):
     return "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in pts) + ("Z" if close else "")
 
 
-def smooth(values, sigma):
-    r = int(3 * sigma)
-    out = []
-    for i in range(len(values)):
-        ws = [(math.exp(-(j * j) / (2 * sigma * sigma)), values[i + j]) for j in range(-r, r + 1) if 0 <= i + j < len(values)]
-        out.append(sum(w * v for w, v in ws) / sum(w for w, _ in ws))
-    return out
-
-
-def spline(points, closed=False):
-    """Catmull-Rom curve through points, as a cubic path."""
-    n = len(points)
-    d = f"M{points[0][0]:.0f} {points[0][1]:.0f}"
-    for i in range(n if closed else n - 1):
-        p0, p1 = points[(i - 1) % n if closed else max(0, i - 1)], points[i]
-        p2, p3 = points[(i + 1) % n], points[(i + 2) % n if closed else min(n - 1, i + 2)]
-        c1 = (p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6)
-        c2 = (p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6)
-        d += f"C{c1[0]:.0f} {c1[1]:.0f} {c2[0]:.0f} {c2[1]:.0f} {p2[0]:.0f} {p2[1]:.0f}"
-    return d
-
-
 def noise(rng, length, octaves, loop=False):
     """Fractal value noise along a line (or round a loop) of the given length. Short
     wavelengths interpolate straight, which tears like paper instead of rippling."""
@@ -388,21 +358,11 @@ def blade(x, base, h, lean, w):
 
 
 def arch(p0, p1, p2, p3, w):
-    """A tapered stroke along one cubic: grass flopping over, a stem arching out."""
+    """A tapered stroke along one cubic: a leaf arching off a reed."""
     pts = [bez((p0, p1, p2, p3), k / 24) for k in range(25)]
     left = [(x - ty * w * (1 - k / 24) ** .8 / 2, y + tx * w * (1 - k / 24) ** .8 / 2) for k, (x, y, tx, ty) in enumerate(pts)]
     right = [(x + ty * w * (1 - k / 24) ** .8 / 2, y - tx * w * (1 - k / 24) ** .8 / 2) for k, (x, y, tx, ty) in enumerate(pts)]
     return poly(left + right[::-1])
-
-
-def leaf(size, width=.42):
-    return (f'M0 0C{size * .25:.1f} {-size * width:.1f} {size * .72:.1f} {-size * width * .95:.1f} {size:.1f} 0'
-            f'C{size * .72:.1f} {size * width * .95:.1f} {size * .25:.1f} {size * width:.1f} 0 0Z')
-
-
-def petals(r, n, turn):
-    return "".join(f'<ellipse cx="{r * .55:.1f}" cy="0" rx="{r * .55:.1f}" ry="{r * .3:.1f}" transform="rotate({turn + 360 / n * p:.0f})"/>'
-                   for p in range(n))
 
 
 # ---------- the tear ----------
@@ -559,258 +519,567 @@ def sun_or_moon(now):
     return False, g, min(g, 1 - g), age
 
 
-def wash(press, plate, y0, y1, tones, clip="sky"):
+def bands(press, plate, y0, y1, t0, t1, clip, n=20, ease=1.0):
     """Halftone gradient in bands of shrinking dots."""
-    bands, (t0, t1) = 12, tones
-    rows = "".join(f'<rect x="-10" y="{y0 + (y1 - y0) * b / bands:.0f}" width="{W + 20}" height="{(y1 - y0) / bands + 1:.0f}" '
-                   f'fill="{press.ink(plate, max(.02, t0 + (t1 - t0) * b / (bands - 1)))}"/>' for b in range(bands))
+    rows = "".join(f'<rect x="-20" y="{y0 + (y1 - y0) * b / n:.1f}" width="{W + 40}" height="{(y1 - y0) / n + 1:.1f}" '
+                   f'fill="{press.ink(plate, max(.02, t0 + (t1 - t0) * (b / (n - 1)) ** ease))}"/>' for b in range(n))
     press.raw(plate, f'<g clip-path="url(#{clip})">{rows}</g>')
 
 
-def sky(press, now, far_y, rng, fortnight, name):
+def sky(press, now, rng, edge):
     day, f, low, age = sun_or_moon(now)
     mood = "night" if not day else "dusk" if low < .08 else "day"
+    press.defs.append(f'<clipPath id="sky"><rect x="-20" y="-20" width="{W + 40}" height="{LAKE + 20}"/></clipPath>')
     if mood == "day":
-        wash(press, "blue", 30, 430, [.42, .04])
-        wash(press, "pink", 260, 430, [.0, .14])
+        bands(press, "blue", 40, LAKE, .55, .05, "sky")
+        bands(press, "yellow", 200, LAKE, .0, .3, "sky", ease=1.6)
+        bands(press, "pink", 320, LAKE, .0, .12, "sky")
     elif mood == "dusk":
-        wash(press, "blue", 30, 430, [.5, .05])
-        wash(press, "pink", 90, 430, [.05, .6])
-        wash(press, "yellow", 250, 430, [.05, .5])
+        bands(press, "blue", 40, LAKE, .62, .03, "sky", ease=.7)
+        bands(press, "pink", 60, LAKE, .04, .62, "sky")
+        bands(press, "yellow", 220, LAKE, .02, .8, "sky", ease=1.4)
     else:
-        press.knocks = tuple(INK)
-        wash(press, "blue", 30, 430, [1, .62])
-        wash(press, "black", 30, 430, [.42, .04])
-        wash(press, "pink", 280, 430, [0, .16])
+        bands(press, "blue", 40, LAKE, 1, .62, "sky")
+        bands(press, "black", 40, LAKE, .48, .06, "sky")
+        bands(press, "pink", 320, LAKE, 0, .12, "sky")
     sx, sy = 170 + f * 940, 420 - math.sin(math.pi * f) * 320
+    if not day:
+        # The sun sets behind the ranges, but the moon keeps clear of them (a crescent cut
+        # by a ridge reads as a shard) and of the torn edge above it. Over the name it rides
+        # above the letters even if the page hides its top: a stem into the disc reads as a lollipop.
+        rim = max((py for px, py in edge if abs(px - sx) < 55 and py < CY), default=0)
+        letters = [p[1] for p in samples(place(NAME)) + samples(place(CROSS)) if abs(p[0] - sx) < 60]
+        sy = min(max(245 - math.sin(math.pi * f) * 140, rim + 62), min(letters, default=1e9) - 72)
     if day:
-        # the disc in a halo of shrinking dots, its outer rings turning slowly
-        warm = [("pink", .9)] if mood == "dusk" else []
-        for k, (r, tone) in enumerate(((150, .1), (124, .2), (100, .34), (82, .55))):
-            ring = f'<circle cx="{sx:.0f}" cy="{sy:.0f}" r="{r}" clip-path="url(#sky)"/>'
-            if k < 2:
-                ring = f'<g class="rays" style="transform-origin:{sx:.0f}px {sy:.0f}px;animation-direction:{("normal", "reverse")[k]}">{ring}</g>'
-            press.put([("yellow", tone)] + [(p, t * tone) for p, t in warm], ring)
-        press.put([("yellow", 1)] + warm, f'<circle cx="{sx:.0f}" cy="{sy:.0f}" r="64"/>')
+        # rays: broad wedges of thin yellow fanned from the sun, turning very slowly
+        warm = [("pink", .35)] if mood == "dusk" else []
+        wedges = []
+        for k in range(18):
+            a = 2 * math.pi * k / 18 + rng.uniform(-.05, .05)
+            half = rng.uniform(.035, .075)
+            wedges.append(f"M{sx:.0f} {sy:.0f}L{sx + 1100 * math.cos(a - half):.0f} {sy + 1100 * math.sin(a - half):.0f}"
+                          f"L{sx + 1100 * math.cos(a + half):.0f} {sy + 1100 * math.sin(a + half):.0f}Z")
+        # they thin with distance: rings round the sun, which turn with it unchanged
+        rings = ((0, 180, 1), (180, 290, .78), (290, 400, .58), (400, 540, .4), (540, 1100, .24))
+        circle = lambda r: f"M{sx - r:.0f} {sy:.0f}a{r} {r} 0 1 0 {2 * r} 0a{r} {r} 0 1 0 {-2 * r} 0Z"
+        for i, (r0, r1, _) in enumerate(rings):
+            press.defs.append(f'<clipPath id="ray{i}"><path clip-rule="evenodd" d="{circle(r1)}{circle(r0) if r0 else ""}"/></clipPath>')
+        fan = press.ref(f'<path d="{"".join(wedges)}"/>')
+        for plate, tone in [("yellow", .4 if mood == "day" else .55)] + [(p, t * .5) for p, t in warm]:
+            art = "".join(f'<use href="{fan}" clip-path="url(#ray{i})" fill="{press.ink(plate, tone * fade)}"/>' for i, (*_, fade) in enumerate(rings))
+            press.raw(plate, f'<g clip-path="url(#sky)"><g class="rays" style="transform-origin:{sx:.0f}px {sy:.0f}px">{art}</g></g>')
+        for r, t in ((170, .1), (140, .16), (116, .23), (96, .3), (80, .38)):
+            press.put([("yellow", t)] + [(p, v * t) for p, v in warm], f'<circle cx="{sx:.0f}" cy="{sy:.0f}" r="{r}" clip-path="url(#sky)"/>', knock=False)
+        press.put([("yellow", 1), ("pink", .8 if mood == "dusk" else .12)], f'<circle cx="{sx:.0f}" cy="{sy:.0f}" r="62"/>')
     else:
         lit = 1 - abs(2 * age / 29.530589 - 1)       # 0 new .. 1 full
-        off = 2 * 58 * lit * (-1 if age < 14.77 else 1)
-        disc = f'<circle cx="{sx:.0f}" cy="{sy:.0f}" r="58"'
+        off = 2 * 50 * lit * (-1 if age < 14.77 else 1)
+        disc = f'<circle cx="{sx:.0f}" cy="{sy:.0f}" r="50"'
         box = f'maskUnits="userSpaceOnUse" x="-20" y="-20" width="{W + 40}" height="{H + 40}"'
-        press.defs.append(f'<mask id="moonlit" {box}>{disc} fill="#fff"/><circle cx="{sx + off:.0f}" cy="{sy:.0f}" r="58"/></mask>')
-        for r, tone in ((190, .82), (150, .7), (116, .58), (88, .46)):   # moonlight thins the sky round it
-            press.put([("blue", tone), ("black", tone * .12)], f'<circle cx="{sx:.0f}" cy="{sy:.0f}" r="{r}" clip-path="url(#sky)"/>')
+        press.defs.append(f'<mask id="moonlit" {box}>{disc} fill="#fff"/><circle cx="{sx + off:.0f}" cy="{sy:.0f}" r="50"/></mask>')
+        for i in range(8):                                # moonlight thins the sky round it
+            t = i / 7
+            press.put([("blue", .96 - .42 * t), ("black", .4 - .36 * t)], f'<circle cx="{sx:.0f}" cy="{sy:.0f}" r="{250 - 170 * t:.0f}" clip-path="url(#sky)"/>')
         press.put([("yellow", .35)], f'{disc} mask="url(#moonlit)"/>')
-        # Most stars are paper left bare. A third twinkle: they are drawn as light over
-        # the ink instead, which is cheaper than knocking a hole through every drum,
-        # and so none of those may sit where the name will cross the sky.
-        stars, lit, sparks = [], [], []
-        for _ in range(90):
-            x, y = rng.uniform(40, W - 40), rng.uniform(40, 400)
-            if y < far_y(x) - 24 and math.dist((x, y), (sx, sy)) > 140:
-                open_sky = min(math.dist((x, y), p[:2]) for p in name) > 28
-                twinkle = f'class="star" style="{tempo(rng.uniform(1.6, 4.5), -rng.uniform(0, 5))}"'
-                if rng.random() < .15 and open_sky:
-                    r = rng.uniform(5, 9)
-                    sparks.append(f'<path {twinkle} d="M{x:.0f} {y - r:.0f}Q{x:.0f} {y:.0f} {x + r:.0f} {y:.0f}Q{x:.0f} {y:.0f} {x:.0f} {y + r:.0f}'
-                                  f'Q{x:.0f} {y:.0f} {x - r:.0f} {y:.0f}Q{x:.0f} {y:.0f} {x:.0f} {y - r:.0f}Z"/>')
-                elif rng.random() < .35 and open_sky:
-                    lit.append(f'<circle {twinkle} cx="{x:.0f}" cy="{y:.0f}" r="{rng.uniform(1.4, 2.6):.1f}"/>')
+        # Most stars are paper left bare. A quarter twinkle: they are drawn as light over
+        # the ink instead, which is cheaper than knocking a hole through every drum.
+        stars, twinkling = [], []
+        for _ in range(110):
+            x, y = rng.uniform(40, W - 40), rng.uniform(50, 380)
+            if math.dist((x, y), (sx, sy)) > 130:
+                if rng.random() < .25:
+                    twinkling.append(f'<circle class="star" style="{tempo(rng.uniform(1.6, 4.5), -rng.uniform(0, 5))}" cx="{x:.0f}" cy="{y:.0f}" r="{rng.uniform(1.2, 2.2):.1f}"/>')
                 else:
-                    stars.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{rng.uniform(1.4, 2.6):.1f}"/>')
+                    stars.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="{rng.uniform(1, 2.2):.1f}"/>')
         press.clear("".join(stars))
-        press.glow(f'<g fill="{on_paper("#FFFFFF")}">{"".join(lit)}</g><g fill="{on_paper(INK["yellow"])}">{"".join(sparks)}</g>')
+        press.glow(f'<g fill="{on_paper("#FFFFFF")}">{"".join(twinkling)}</g>')
 
-    # Clouds: paper knocked out of every drum, a shaded belly, drifting on the wind.
-    belly = {"day": ("pink", .22), "dusk": ("pink", .55), "night": ("blue", .45)}[mood]
-    for k in range(5):
-        cy = rng.uniform(70, 250)
-        span = rng.uniform(140, 280)
-        puffs = "".join(f'<ellipse cx="{rng.uniform(-span / 2, span / 2):.0f}" cy="{rng.uniform(-14, 4):.0f}" '
-                        f'rx="{rng.uniform(26, 56):.0f}" ry="{rng.uniform(16, 30):.0f}"/>' for _ in range(7))
-        base = f'<rect x="{-span / 2 - 20:.0f}" y="-4" width="{span + 40:.0f}" height="18" rx="9"/>'
-        dur = rng.uniform(160, 260)
-        wrap = f'<g clip-path="url(#sky)"><g class="cloud" style="{tempo(dur, -dur * (k + rng.random()) / 5)}"><g transform="translate(0 {cy:.0f})">'
-        body = press.ref(puffs + base)
-        cid = f"cl{k}"
-        press.defs.append(f'<clipPath id="{cid}"><use href="{body}"/></clipPath>')
+    # long stratus streaks drifting on the wind: paper knocked out of every drum, a shaded belly
+    lit = {"day": [], "dusk": [("yellow", .22)], "night": [("blue", .5)]}[mood]
+    belly = {"day": ("pink", .18), "dusk": ("pink", .45), "night": ("blue", .75)}[mood]
+    for k in range(3):
+        cy = rng.uniform(110, 250)
+        span = rng.uniform(260, 460)
+        puffs = "".join(f'<ellipse cx="{rng.uniform(-span / 2, span / 2):.0f}" cy="{rng.uniform(-5, 2):.0f}" '
+                        f'rx="{rng.uniform(40, 110):.0f}" ry="{rng.uniform(5, 11):.0f}"/>' for _ in range(6))
+        puffs += f'<rect x="{-span / 2:.0f}" y="-2" width="{span:.0f}" height="7" rx="3.5"/>'
+        body = press.ref(puffs)
+        press.defs.append(f'<clipPath id="st{k}">{puffs}</clipPath>')      # a clip may not <use> a group
+        dur = rng.uniform(220, 320)
+        wrap = f'<g clip-path="url(#sky)"><g class="cloud" style="{tempo(dur, -dur * (k + rng.random()) / 3)}"><g transform="translate(0 {cy:.0f})">'
         for plate in INK:
-            art = f'<use href="{body}" fill="#fff"/>'
-            if mood == "night" and plate == "blue":        # moonlit, not paper-white
-                art += f'<use href="{body}" fill="{press.ink("blue", .4)}"/>'
+            art = f'<use href="{body}" fill="#fff"/>' + "".join(f'<use href="{body}" fill="{press.ink(p, t)}"/>' for p, t in lit if p == plate)
             if plate == belly[0]:
-                art += f'<rect x="{-span:.0f}" y="2" width="{span * 2:.0f}" height="40" clip-path="url(#{cid})" fill="{press.ink(*belly)}"/>'
+                art += f'<rect x="{-span:.0f}" y="1" width="{span * 2:.0f}" height="20" clip-path="url(#st{k})" fill="{press.ink(*belly)}"/>'
             press.raw(plate, wrap + art + "</g></g></g>")
-
-    # Birds, one for each day worked in the last fortnight, while it is light.
-    if day and fortnight:
-        flock = []
-        for b in range(fortnight):
-            bx, by = -b * rng.uniform(16, 26) + rng.uniform(-8, 8), (b % 2 * 2 - 1) * b * rng.uniform(4, 9) + rng.uniform(-6, 6)
-            s = rng.uniform(.8, 1.25)
-            flock.append(f'<g transform="translate({bx:.0f} {by:.0f}) scale({s:.2f})"><path class="bird" style="{tempo(rng.choice((.25, .33)), -rng.random())}" '
-                         f'd="M-7 0Q-3.5 -4.5 0 0Q3.5 -4.5 7 0"/></g>')
-        route = f"M-120 {rng.uniform(150, 220):.0f}C300 {rng.uniform(90, 160):.0f} 800 {rng.uniform(180, 260):.0f} 1500 {rng.uniform(100, 180):.0f}"
-        press.raw("black", f'<g clip-path="url(#sky)"><g class="glide" style="{glide(route, rng.uniform(48, 62), -rng.uniform(8, 30))}">'
-                           f'<g fill="none" stroke="{INK["black"]}" stroke-width="1.5" stroke-linecap="round">{"".join(flock)}</g></g></g>')
-    return mood, (sx, sy)
+    return mood, (sx, sy), day
 
 
-# ---------- land ----------
+# ---------- land and water ----------
 
-def ranges_for(weeks, rng):
-    """Two ranges of peaks, (x, base, height, left reach, right reach) each. The far
-    range has a peak per four weeks, as tall as the best of them; the foothills in
-    front follow the weeks smoothed."""
-    top = max(weeks) or 1
+def ridges(weeks, rng):
+    """Six ranges of the year's weeks, the oldest furthest away, each a function
+    x -> ridge y. The far ranges are the great ones, the near ones foothills."""
+    top = math.sqrt(max(weeks) or 1)
     out = []
-    for base, lift, reach, group, spread, vals in ((430, 34, 250, 4, (1.1, 1.7), weeks),
-                                                  (470, 14, 104, 6, (1.5, 2.3), smooth(weeks, 2.5))):
-        peaks = []
-        for g0 in range(0, len(vals), group):
-            h = lift + reach * math.sqrt(max(vals[g0:g0 + group]) / top) * rng.uniform(.85, 1.1)
-            px = -30 + (W + 60) * (g0 + group / 2) / len(vals) + rng.uniform(-22, 22)
-            peaks.append((px, base, h, h * rng.uniform(*spread), h * rng.uniform(*spread)))
-        out.append(peaks)
+    n = len(weeks)
+    span = W + 240
+    for k in range(6):
+        vals = weeks[round(n * k / 6):round(n * (k + 1) / 6)]
+        depth = 1 - .13 * k
+        base = 330 + 36 * k
+        # the weeks set the height of the land along the range, eased between them; a range
+        # of quiet weeks is lower overall, but every range keeps some relief
+        rmax = math.sqrt(max(vals) or 1)
+        relief = 60 + 80 * rmax / top
+        env = [depth * (52 + relief * math.sqrt(v) / rmax) * rng.uniform(.9, 1.08) for v in vals]
+        step = span / len(env)
+
+        def envelope(s, env=env, step=step):
+            u = min(max(s / step - .5, 0), len(env) - 1.001)
+            i, f = int(u), (1 - math.cos(math.pi * (u % 1))) / 2
+            return env[i] * (1 - f) + env[min(i + 1, len(env) - 1)] * f
+        # peaks stand at uneven intervals, each as tall as the land there allows, with
+        # flanks of their own steepness; the skyline is the highest of them
+        # the newest range comes down to the water as a headland at either side, opening
+        # the view in the middle
+        frame = (lambda x: .35 + 2.6 * (abs(x - W / 2) / (W / 2)) ** 2.4) if k == 5 else (lambda _: 1)
+        peaks, x = [], -140.0
+        while x < W + 140:
+            x += rng.uniform(80, 280) * (1.25 - .07 * k)
+            h = envelope(x + 120) * rng.uniform(.3, 1) ** .7 * frame(x)
+            peaks.append((x, h, h * rng.uniform(1.1, 3.2), h * rng.uniform(1.1, 3.2)))
+        jag = noise(rng, span, [(90, 3 + k), (34, 2.5 + .8 * k), (12, 1.2 + .5 * k), (4.5, .5 + .25 * k)])
+
+        def y(x, peaks=peaks, jag=jag, base=base):
+            m = max(h * max(0.0, 1 - (px - x) / wl if x < px else 1 - (x - px) / wr) ** 1.3 for px, h, wl, wr in peaks)
+            return base - m - jag(x + 120)
+        out.append((y, base, max(h for _, h, *_ in peaks) + 8, peaks))
     return out
 
 
-def ridge(peaks, x):
-    """The skyline of a range at x, flanks taken straight."""
-    return min(base - h + h * abs(x - px) / (wl if x < px else wr) for px, base, h, wl, wr in peaks)
+def mist(press, y, rng, mood):
+    """A wisp of valley mist drifting along the foot of a range: a paper core
+    feathered out through a reverse screen; only a thin veil by moonlight."""
+    span = rng.uniform(700, 1100)
+    blobs = [(rng.uniform(-span / 2, span / 2), rng.uniform(-3, 3), rng.uniform(70, 170), rng.uniform(4, 10)) for _ in range(9)]
+    puffs = lambda grow: "".join(f'<ellipse cx="{cx:.0f}" cy="{cy:.0f}" rx="{rx * grow:.0f}" ry="{ry * grow:.1f}"/>' for cx, cy, rx, ry in blobs)
+    dur = rng.uniform(320, 440)
+    reach = span / 2 + 200
+    wrap = (f'<g class="mist" style="--a:{-reach:.0f}px;--b:{W + reach:.0f}px;{tempo(dur, -dur * rng.random())}">'
+            f'<g transform="translate(0 {y:.0f})">')
+    layers = ((2.2, .15), (1.6, .3), (1.15, .45)) if mood == "night" else ((2.2, .25), (1.6, .5), (1.15, .75), (.8, 1))
+    art = "".join(f'<g fill="{press.veil(t) if t < 1 else "#fff"}">{puffs(grow)}</g>' for grow, t in layers)
+    for plate in INK:
+        press.raw(plate, wrap + art + "</g></g>")
 
 
-def crag(rng, a, b):
-    """A flank from a to b, broken by midpoint displacement into rock."""
-    pts, amp = [a, b], math.dist(a, b) * .07
+SHADE = {"day": [("blue", .5), ("black", .14)], "dusk": [("blue", .5), ("pink", .1), ("black", .18)], "night": [("blue", .2), ("black", .32)]}
+
+
+def faces(y, peaks, sx, foot, rng):
+    """The flank of each skyline peak turned from the sun, as one path: along the
+    ridge from the summit to the valley, then down a wavering crease."""
+    out = []
+    for px, h, wl, wr in peaks:
+        if not -60 < px < W + 60:
+            continue
+        top = lambda x, px=px, h=h, wl=wl, wr=wr: h * max(0.0, 1 - (px - x) / wl if x < px else 1 - (x - px) / wr) ** 1.3
+        owner = lambda x: max(peaks, key=lambda q: q[1] * max(0.0, 1 - (q[0] - x) / q[2] if x < q[0] else 1 - (x - q[0]) / q[3]) ** 1.3)[0]
+        if owner(px) != px:                              # hidden behind a taller neighbour
+            continue
+        way = 1 if px > sx else -1
+        edge, x = [], px
+        while abs(x - px) < 400 and owner(x) == px and top(x) > 0:
+            edge.append((x, y(x)))
+            x += 3 * way
+        if len(edge) < 4:
+            continue
+        ay = y(px)
+        crease = [(px + way * (t * (foot - ay) * .2) + rng.uniform(-2.5, 2.5), ay + t * (foot - ay)) for t in (i / 10 for i in range(11))]
+        out.append(poly(edge + [(edge[-1][0], foot)] + crease[::-1]))
+    return "".join(out)
+
+
+# Larches among the pines keep the calendar: soft green in spring, gold in autumn.
+LARCH = {
+    "spring": {"day": [("yellow", .75), ("blue", .35)], "dusk": [("yellow", .6), ("blue", .45), ("pink", .2)]},
+    "autumn": {"day": [("yellow", 1), ("pink", .1), ("black", .24)], "dusk": [("yellow", .85), ("pink", .18), ("black", .32)]},
+}
+
+
+def season(now):
+    md = (lambda d: d.month * 100 + d.day)(now.astimezone(LA))
+    return "winter" if md >= 1221 or md < 320 else "spring" if md < 621 else "summer" if md < 922 else "autumn"
+
+
+def pines(press, y, base, mood, wave, rng, when, clearing=None):
+    """Dark pines along the headlands, in stands that lean together in a gust; a
+    larch among them now and then, in its season's colour."""
+    larch = LARCH.get(when, {}).get(mood)
+    stands, x = {}, -10.0
+    while x < W + 10:
+        land = base - y(x)
+        if land > 40 and not (clearing and abs(x - clearing) < 24):
+            kind = "larch" if larch and rng.random() < .3 else "pine"
+            s = rng.uniform(.6, 1) * min(1.6, land / 70)
+            h, w, n, cut = (44 * s, 13 * s, rng.randint(4, 6), .45) if kind == "pine" else (47 * s, 12.5 * s, rng.randint(5, 7), .5)
+            tx, ty = x, y(x) + 6
+            left = [(tx, ty - h)]
+            for i in range(1, n + 1):
+                f = i / n
+                left += [(tx - w * f * rng.uniform(.9, 1.15), ty - h + h * f * .92), (tx - w * f * cut, ty - h + h * f * .92 - h * .05)]
+            right = [(2 * tx - a, b + rng.uniform(-1, 1)) for a, b in left[1:]][::-1]
+            stands.setdefault((int(x // 260), kind), []).append(poly(left + [(tx - w * .12, ty), (tx + w * .12, ty)] + right))
+            x += rng.uniform(.35, .8) * w * 2
+        else:
+            x += 12
+    inks = {"pine": SIL if mood != "day" else [("blue", .9), ("yellow", .6), ("black", .5)], "larch": larch}
+    for (key, kind), parts in stands.items():
+        ref = press.ref(f'<path d="{"".join(parts)}"/>')
+        gx = key * 260 + 130
+        fills = {p: press.ink(p, t) for p, t in inks[kind]}
+        for p in INK:
+            press.raw(p, f'<g class="gust" style="--o:{gx:.0f}px {y(gx):.0f}px;{wave(gx)}"><use href="{ref}" fill="{fills.get(p, "#fff")}"/></g>')
+
+
+def clearing(y, base, rng):
+    """A level spot on a headland's slope for the cabin, or None."""
+    side = rng.choice((0, 1))
+    xs = range(130, 330, 4) if side == 0 else range(W - 330, W - 130, 4)
+    spots = [x for x in xs if 45 < base - y(x) < 110]
+    return min(spots, key=lambda x: abs(y(x + 8) - y(x - 8)) + rng.uniform(0, 3)) if spots else None
+
+
+def cabin(press, x, y, mood, today, idle, drift):
+    """A cabin in the clearing. Smoke rises from its chimney on days with work in
+    them; after dark its window is lit if there was a push in the last six hours."""
+    s, bx, by = 1.15, x, y(x) + 13
+    walls = f'<path transform="translate({bx:.0f} {by:.0f}) scale({s})" d="M-12 0V-12H12V0Z"/>'
+    roof = f'<path transform="translate({bx:.0f} {by:.0f}) scale({s})" d="M-15.5 -11L0 -22.5L15.5 -11ZM6 -16V-26H10V-14Z"/>'
+    press.put(SIL if mood != "day" else [("yellow", .55), ("pink", .4), ("black", .5)], walls)
+    press.put(SIL, roof)
+    if mood != "day" and idle < 6:
+        warm = on_paper(INK["yellow"])
+        press.glow(f'<g fill="{warm}"><circle cx="{bx - 4 * s:.1f}" cy="{by - 6 * s:.1f}" r="9" opacity=".22"/>'
+                   f'<rect x="{bx - 7 * s:.1f}" y="{by - 8 * s:.1f}" width="{6 * s:.1f}" height="{4.5 * s:.1f}"/></g>')
+    if today:
+        colour = {"day": "#A3B2BF", "dusk": "#8E8FA6", "night": "#8FA3B6"}[mood]
+        puffs = "".join(f'<circle class="smoke" style="--wx:{drift:.0f}px;{tempo(SMOKE / FPS, -i * SMOKE / FPS / 5)}" cx="{bx + 8 * s:.1f}" cy="{by - 27 * s:.1f}" r="{3.4 + i * .3:.1f}"/>'
+                        for i in range(5))
+        press.glow(f'<g fill="{colour}">{puffs}</g>')
+
+
+def ranges(press, rs, mood, fog, sun, wave, rng, when, home):
+    """The ranges back to front, each thinning into haze at its foot, shadowed on
+    the flanks turned from the sun and lit along its ridge; mist lies in more of
+    the valleys the quieter the week."""
+    floor = .82 if mood == "night" else .52 - .3 * fog
+    wisps = rng.sample(range(1, 5), 1 + round(2 * fog))
+    for k, (y, base, tallest, peaks) in enumerate(rs):
+        ridge = [(x, y(x)) for x in range(-20, W + 21, 3)]
+        shape = poly([(-20, H + 20)] + ridge + [(W + 20, H + 20)])
+        press.clear(f'<path d="{shape}"/>')
+        press.defs.append(f'<clipPath id="r{k}"><path d="{shape}"/></clipPath>')
+        top, foot = base - tallest, base + 36
+        for plate, tone in RANGE[mood][k]:
+            bands(press, plate, top, foot, tone, tone * floor, f"r{k}", n=14, ease=.8)
+            press.raw(plate, f'<rect x="-20" y="{foot:.0f}" width="{W + 40}" height="{H - foot + 20:.0f}" fill="{press.ink(plate, tone * floor)}" clip-path="url(#r{k})"/>')
+        if k < 5:
+            press.defs.append(f'<clipPath id="f{k}"><path d="{faces(y, peaks, sun[0], foot, rng)}"/></clipPath>')
+            for plate, tone in SHADE[mood]:
+                bands(press, plate, top, foot, tone * (.7 + .06 * k), tone * floor * .5, f"f{k}", n=10, ease=.8)
+        if when == "winter" and 1 <= k <= 4:             # snow on the blue middle ranges; the far ones are pale already
+            line = noise(rng, W + 40, [(60, 6), (18, 3), (6, 1.4)])
+            level = base - tallest * .6                  # snow lies above an altitude, not a depth
+            snow = poly(ridge + [(x, max(y(x), level + line(x + 20))) for x in range(W + 20, -21, -3)])
+            press.clear(f'<path d="{snow}"/>')
+            press.put([("blue", .2 if mood != "night" else .5)], f'<path d="{snow}" clip-path="url(#f{k})"/>', knock=False)
+        rim = poly(ridge, False)
+        if k > 3:                                        # the near ranges are lit only where the sun catches them
+            if k == 5:
+                spot = clearing(y, base, rng)
+                pines(press, y, base, mood, wave, rng, when, spot)
+                if spot:
+                    home(spot, y)
+            if k in wisps:
+                mist(press, base + 14, rng, mood)
+            continue
+        press.clear(f'<path d="{rim}" fill="none" stroke="#fff" stroke-width="{1.8 + .2 * k:.1f}" stroke-linejoin="round"/>', paint="stroke")
+        press.put(RIM[mood], f'<path d="{rim}" fill="none" stroke-width="{1 + .15 * k:.1f}" stroke-linejoin="round"/>', knock=False, paint="stroke")
+        if k in wisps:                                   # in the valley, behind the next range
+            mist(press, base + 14, rng, mood)
+
+
+def reflection(press, hand, mood):
+    """The name upside down in the water, foreshortened, in bands that sway apart
+    and back like a lake's surface."""
+    flip = f"translate(0 {LAKE * (1 + REFLECT):.1f}) scale(1 {-REFLECT})"
+    deep = LAKE + REFLECT * (LAKE - (OY - 176 * SCALE)) + 6
+    rows = [(y, min(y + 5, deep)) for y in range(LAKE, int(deep), 5)]
+    for side in (0, 1):
+        press.defs.append(f'<clipPath id="rip{side}">' + "".join(
+            f'<rect x="-40" y="{a}" width="{W + 80}" height="{b - a:.0f}"/>' for i, (a, b) in enumerate(rows) if i % 2 == side) + "</clipPath>")
+    ink = {"day": [("blue", .4), ("black", .3)], "dusk": [("blue", .45), ("pink", .15), ("black", .38)], "night": [("yellow", .6)]}[mood]
+    fills = {p: press.ink(p, t) for p, t in ink}
+    if mood == "night":                              # yellow reads on dark water only through a knockout
+        fills = {p: fills.get(p, "#fff") for p in INK}
+    for p, fill in fills.items():
+        art = f'<use href="{hand}" transform="{flip}" mask="url(#written)" fill="{fill}"/>'
+        press.raw(p, f'<g clip-path="url(#lake)">' + "".join(
+            f'<g class="rip" style="--x:{3 if side else -3}px;{tempo(1.9, -side * .6)}"><g clip-path="url(#rip{side})">{art}</g></g>'
+            for side in (0, 1)) + "</g>")
+
+
+def lake(press, rs, mood, sun, today, hand, rng):
+    press.defs.append(f'<clipPath id="lake"><rect x="-20" y="{LAKE}" width="{W + 40}" height="{H - LAKE + 20}"/></clipPath>')
+    press.clear(f'<rect x="-20" y="{LAKE}" width="{W + 40}" height="{H - LAKE + 20}"/>')
+    # the water holds the sky just above the horizon, darkening toward the viewer
+    if mood == "day":
+        bands(press, "blue", LAKE, H, .1, .55, "lake", n=10)
+        bands(press, "yellow", LAKE, H, .3, .04, "lake", n=10)
+    elif mood == "dusk":
+        bands(press, "yellow", LAKE, H, .85, .08, "lake", n=10, ease=.7)
+        bands(press, "pink", LAKE, H, .4, .22, "lake", n=10)
+        bands(press, "blue", LAKE, H, .08, .66, "lake", n=10)
+    else:
+        bands(press, "blue", LAKE, H, .5, .85, "lake", n=10)
+        bands(press, "black", LAKE, H, .04, .28, "lake", n=10)
+    # the near range upside down in the water, seen from above so foreshortened, broken by ripples
+    y = rs[-1][0]
+    mirror = [(x, LAKE + (LAKE - y(x)) * REFLECT) for x in range(-20, W + 21, 4)]
+    press.put([(p, t * .5) for p, t in RANGE[mood][-1]], f'<path d="{poly([(-20, LAKE)] + mirror + [(W + 20, LAKE)])}" clip-path="url(#lake)"/>')
+    reflection(press, hand, mood)
+    streaks = []
+    for _ in range(70):
+        row = LAKE + 3 + (H - LAKE) * rng.random() ** 1.4
+        streaks.append(f'<rect x="{rng.uniform(-20, W):.0f}" y="{row:.1f}" width="{rng.uniform(30, 160):.0f}" height="{rng.uniform(.8, 2):.1f}"/>')
+    press.clear(f'<g clip-path="url(#lake)">{"".join(streaks)}</g>')
+    # the far shore: a low ragged strip of dark land where the range meets the water
+    lip = noise(rng, W + 40, [(140, 2.2), (40, 1.2), (11, .6)])
+    press.put([(p, t * .8) for p, t in RANGE[mood][-1]], f'<path d="{poly([(x, LAKE - .5 - abs(lip(x + 20)) * 1.2) for x in range(-20, W + 21, 5)] + [(W + 20, LAKE + .8), (-20, LAKE + .8)])}"/>')
+    # the road of light the sun or moon lays across the water, widening toward the viewer
+    road = []
+    for i in range(34):
+        d = i / 33
+        w = (14 + 130 * d) * rng.uniform(.35, 1)
+        road.append(f'<rect x="{sun[0] + rng.gauss(0, 4 + 20 * d) - w / 2:.0f}" y="{LAKE + 3 + (H - LAKE - 8) * d ** 1.25:.1f}" '
+                    f'width="{w:.0f}" height="{1.2 + 2.4 * d:.1f}" rx="1"/>')
+    road = f'<g clip-path="url(#lake)">{"".join(road)}</g>'
+    if mood == "day":
+        press.clear(road)
+    else:
+        press.put([("yellow", 1), ("pink", .25)] if mood == "dusk" else [("yellow", .55)], road)
+    # today's work, as light glittering on the water under the sun or moon
+    glints = []
+    for k in range(min(60, today)):
+        d = rng.random()
+        gx = sun[0] + rng.gauss(0, 10 + 70 * d)
+        glints.append((k % 3, f'<rect x="{gx - 3 - 9 * d:.0f}" y="{LAKE + 4 + (H - LAKE - 10) * d:.1f}" '
+                              f'width="{6 + 18 * d * rng.uniform(.5, 1.2):.0f}" height="{1.2 + 1.4 * d:.1f}" rx="1"/>'))
+    colour = on_paper("#FFF6C8" if mood == "night" else "#FFFFFF")
+    for group in range(3):
+        art = "".join(a for k, a in glints if k == group)
+        if art:
+            press.glow(f'<g class="star" style="{tempo(rng.uniform(.8, 1.6), -rng.uniform(0, 2))}" fill="{colour}" clip-path="url(#lake)">{art}</g>')
+
+
+def bay(rng):
+    """The near shore round a bay: banks in the corners, shallows across the middle,
+    where things stand further off and smaller."""
+    ph = [rng.uniform(0, 6.3) for _ in range(2)]
+    ground = lambda x: 704 - 62 * (1 - (2 * x / W - 1) ** 2) - 5 * math.sin(x / 150 + ph[0]) - 3 * math.sin(x / 47 + ph[1])
+    near = lambda x: .42 + .58 * abs(2 * x / W - 1) ** 1.3
+    return ground, near
+
+
+def reeds(press, days, counts, tone, cap, budding, wave, shore, rng):
+    """A stem per day along the near shore, the year left to right; gusts roll
+    through them four weeks at a time."""
+    ground, near = shore
+    # banks only in the corners; across the middle the reeds stand out in the shallows
+    bank = lambda x: ground(x) + 400 * max(0.0, .72 - near(x))
+    press.put(SIL, f'<path d="{poly([(-20, H + 20)] + [(x, bank(x)) for x in range(-20, W + 21, 8)] + [(W + 20, H + 20)])}"/>')
+    pitch = (W - 120) / len(days)
+    for wk in range(0, len(days), 28):
+        gx = 60 + pitch * (wk + 14)
+        art = []
+        for di in range(wk, min(wk + 28, len(days))):
+            x = 60 + pitch * (di + 0.5) + rng.uniform(-1.2, 1.2)
+            c = counts[di]
+            base = ground(x) + 6
+            h = ((8 + 150 * tone(c) + rng.uniform(0, 12)) if c else rng.uniform(4, 14)) * near(x)
+            lean = (rng.uniform(-8, 8) + h * .04) * near(x)
+            art.append(blade(x, base, h, lean, (1.3 + 1.7 * tone(c)) * near(x)))
+            if c and near(x) > .72 and rng.random() < .55:   # a leaf arching off the stems on the banks
+                side, l = rng.choice((-1, 1)), h * rng.uniform(.35, .7)
+                art.append(arch((x, base), (x + side * l * .1, base - l * .8), (x + side * l * .5, base - l), (x + side * l * .75, base - l * .7), 2.6))
+            for _ in range(2 if near(x) > .72 else 0):   # and low grass on the banks
+                tx = x + rng.uniform(-pitch, pitch)
+                art.append(blade(tx, ground(tx) + 6, rng.uniform(6, 20) * near(tx), rng.uniform(-6, 6), 1.6 * near(tx)))
+            if c and c >= budding:                        # the busier days go to seed
+                fx, fy = x + lean, base - h
+                size = (9 if c >= cap else 5.5) * near(x)
+                ang = math.degrees(math.atan2(lean, h))
+                art.append(f'M{fx:.1f} {fy + 2:.1f}m-2.2 0a2.2 {size:.1f} {ang:.0f} 1 0 4.4 0a2.2 {size:.1f} {ang:.0f} 1 0 -4.4 0Z')
+        ref = press.ref(f'<path d="{"".join(art)}"/>')
+        # cut out of the warm drums as they bend, so the lit water never tints them
+        fills = {"yellow": "#fff", "pink": "#fff", **{p: press.ink(p, t) for p, t in SIL}}
+        for p, fill in fills.items():
+            press.raw(p, f'<g class="gust" style="--o:{gx:.0f}px {ground(gx):.0f}px;{wave(gx)}"><use href="{ref}" fill="{fill}"/></g>')
+
+
+def pen_hand(press, rng):
+    """The name's outline and the mask that writes it in on load, shared by the
+    name and its reflection."""
+    k = SCALE / 1.16
+    pts, cross, tend = samples(place(NAME)), samples(place(CROSS)), samples(place(TENDRIL))
+    body = (ribbon(pts, pen(pts, 4.6 * k, 36 * k), rng) + ribbon(cross, pen(cross, 3.6 * k, 13 * k), rng)
+            + ribbon(tend, pen(tend, 3 * k, 8 * k), rng))
+    reveal = "".join(f'<path class="write" pathLength="1" d="{line(p)}" style="{tempo(dur, at)}"/>'
+                     for p, at, dur in ((pts, .6, 2.6), (cross, 3.1, .4), (tend, 3.4, .8)))
+    press.defs.append(f'<mask id="written" maskUnits="userSpaceOnUse" x="-20" y="-20" width="{W + 40}" height="{H + 40}">{reveal}</mask>')
+    return press.ref(f'<path d="{body}"/>')
+
+
+def name(press, hand, mood):
+    """The name: black over a blue hit for a rich ink, cut clean out of the
+    landscape, the pink drum slipping at its edge."""
+    written = f'<use href="{hand}" mask="url(#written)"/>'
+    press.clear(f'<use href="{hand}" stroke="#fff" stroke-width="3" stroke-linejoin="round" mask="url(#written)"/>')
+    press.put([("pink", 1)], f'<g transform="translate(2.2 1.6)">{written}</g>', knock=False)
+    press.clear(written, plates=["pink"])              # pink only where it slipped
+    ink = [("yellow", 1), ("pink", .12)] if mood == "night" else [("blue", .9), ("black", 1)]   # by night, in the moon's yellow
+    press.put(ink, written, knock=False)
+
+
+def birds(fortnight, rng, theme):
+    """The days worked in the last fortnight: a flock rising out of the distance,
+    growing as it nears, and leaving over the torn page. Past the tear it is drawn
+    in the page's own light, or it would vanish into GitHub's dark."""
+    if not fortnight:
+        return ""
+    flock = []
+    for b in range(fortnight):
+        bx, by = -b * rng.uniform(14, 22) + rng.uniform(-6, 6), (b % 2 * 2 - 1) * b * rng.uniform(3, 7) + rng.uniform(-5, 5)
+        flock.append(f'<g transform="translate({bx:.0f} {by:.0f}) scale({rng.uniform(.8, 1.2):.2f})"><path class="bird" style="{tempo(rng.choice((.25, .33)), -rng.random())}" '
+                     f'd="M-8 0Q-4 -5 0 0Q4 -5 8 0"/></g>')
+    route, length, begin = "M960 420C1030 300 1100 170 1250 -70", FLOCK / FPS, -rng.uniform(4, 20)
+    art = lambda colour: (f'<g class="glide" style="{glide(route, length, begin)}"><g class="away" style="{tempo(length, begin)}">'
+                          f'<g fill="none" stroke="{colour}" stroke-width="1.6" stroke-linecap="round">{"".join(flock)}</g></g></g>')
+    beyond = PAGE[theme]["rim"] if theme == "dark" else INK["black"]
+    return f'<g clip-path="url(#hole)">{art(INK["black"])}</g><g clip-path="url(#outside)">{art(beyond)}</g>'
+
+
+# ---------- life ----------
+
+def dark(press, svg, recipe=SIL):
+    """A dark shape on its own inks, without a knockout: it prints dark over
+    anything. Drawn inline rather than by reference, so its parts can move."""
+    for p, t in recipe:
+        c = press.ink(p, t)
+        press.raw(p, f'<g fill="{c}" stroke="{c}">{svg}</g>')
+
+
+HERON = ('<path stroke-width=".6" d="M12 -19C6 -16 -4 -20 -8 -28C-9 -33 -4 -36 2 -34C8 -31 11 -25 12 -19Z"/>'
+         '<path fill="none" stroke-width="1.3" d="M1 -21L0 0M4 -21L4.6 0"/>'
+         '<g class="{cls}" style="transform-origin:-6px -31px;{t}"><path fill="none" stroke-width="2.8" stroke-linecap="round" d="M-6 -31C-11 -35 -4 -41 -8 -47"/>'
+         '<circle stroke-width=".4" cx="-8.5" cy="-48" r="2.6"/><path stroke-width=".4" d="M-10 -49.6L-21 -47.6L-9.6 -46.2Z"/></g>')
+
+
+def heron(press, shore, rng):
+    """A heron in the shallows, facing into the bay; now and then it strikes."""
+    ground, near = shore
+    side = rng.choice((-1, 1))
+    x = W / 2 + side * rng.uniform(170, 250)           # out in open water, clear of the reed beds
+    sc, base = 2.3 * near(x), ground(x) + 3
+    face = f"translate({x:.0f} {base:.0f}) scale({sc * side:.2f} {sc:.2f})"
+    dark(press, f'<g transform="translate({x:.0f} {base:.0f}) scale({sc * side:.2f} {-sc * .5:.2f})">{HERON.format(cls="", t="")}</g>',
+         [("blue", .45), ("black", .2)])
+    dark(press, f'<g transform="{face}">{HERON.format(cls="strike", t=tempo(STRIKE / FPS, -rng.uniform(0, STRIKE / FPS)))}</g>')
+    return x
+
+
+BOAT = ('<path d="M-24 -1C-16 5 16 5 24 -1L21 -4.5H-21Z"/><path d="M-4 -4.5L-2.5 -16H3L4.5 -4.5Z"/>'
+        '<circle cx=".3" cy="-19.2" r="3"/><path fill="none" stroke-width="1.3" d="M-9 -15L7 2"/>')
+
+
+def boat(press, mood, rng, heron_x=None):
+    """A boat out on the lake: someone shipped within the hour. By night it carries a lantern.
+    It rows the open water between the reed beds, on the far side of any heron."""
+    a, b = 200, W - 200
+    if heron_x is not None:
+        a, b = (heron_x + 90, b) if heron_x < W / 2 else (a, heron_x - 90)
+    route, length, begin = f"M{a:.0f} 598L{b:.0f} 598", ROW / FPS, -rng.uniform(0, ROW / FPS)
+    move = f'class="row" style="{glide(route, length, begin)}"'
+    dark(press, f'<g {move}><g transform="scale(1.3)">{BOAT}</g></g>')
+    dark(press, f'<g {move}><g transform="scale(1.3 -.65)">{BOAT}</g></g>', [("blue", .5), ("black", .25)])
+    wake = on_paper("#FFFFFF") if mood != "night" else "#B8C8D6"
+    lamp = (f'<circle cx="19" cy="-9" r="8" fill="{on_paper(INK["yellow"])}" opacity=".25"/><circle cx="19" cy="-9" r="2.2" fill="{on_paper(INK["yellow"])}"/>'
+            f'<rect x="16" y="3" width="6" height="14" fill="{on_paper(INK["yellow"])}" opacity=".4"/>') if mood == "night" else ""
+    press.glow(f'<g {move}><path d="M-25 1L-78 8M-25 1L-72 -4" stroke="{wake}" stroke-width="1.2" opacity=".7"/>{lamp}</g>')
+
+
+def rises(press, mood, rng):
+    """Fish rising: rings spreading on the water here and there."""
+    colour, alpha = {"day": (on_paper(INK["blue"]), .7), "dusk": ("#F4EFE6", .85), "night": ("#DCE5EC", .7)}[mood]
     for _ in range(5):
-        nxt = [pts[0]]
-        for p, q in zip(pts, pts[1:]):
-            nxt += [((p[0] + q[0]) / 2 + rng.uniform(-amp, amp) * .5, (p[1] + q[1]) / 2 + rng.uniform(-amp, amp)), q]
-        pts, amp = nxt, amp * .55
-    return pts
+        y = rng.uniform(LAKE + 20, 640)
+        x, near = rng.uniform(140, W - 140), .5 + .8 * (y - LAKE) / (640 - LAKE)
+        press.glow(f'<g class="ring" style="{tempo(RING / FPS, -rng.uniform(0, RING / FPS))}" fill="none" stroke="{colour}" '
+                   f'stroke-width="{.9 + .7 * near:.1f}" opacity="{alpha}"><ellipse cx="{x:.0f}" cy="{y:.0f}" rx="{24 * near:.1f}" ry="{5.5 * near:.1f}"/>'
+                   f'<ellipse cx="{x:.0f}" cy="{y:.0f}" rx="{13 * near:.1f}" ry="{3 * near:.1f}"/></g>')
 
 
-def mountains(press, ranges, rng, light_x, mood):
-    """Peaks stacked tallest at the back, each with its flank away from the light in
-    shade along a diagonal facet; snow on the three biggest."""
-    recipes = [([("blue", .45), ("pink", .12)], [("blue", .78), ("pink", .22)]), ([("blue", .72), ("pink", .28)], [("blue", 1), ("pink", .42)])]
-    if mood == "night":
-        recipes = [([("blue", .7)], [("blue", .9), ("black", .2)]), ([("blue", .9), ("black", .25)], [("blue", 1), ("black", .45)])]
-    snowy = sorted(ranges[0], key=lambda p: -p[2])[:3]
-    for k, peaks in enumerate(ranges):
-        lit, shade = recipes[k]
-        for peak in sorted(peaks, key=lambda p: -p[2]):
-            px, base, h, wl, wr = peak
-            summit = (px, base - h)
-            left, right = crag(rng, (px - wl, base + 70), summit), crag(rng, summit, (px + wr, base + 70))
-            shape = poly(left + right[1:])
-            vary = rng.uniform(-.05, .05)
-            press.put([(p, t + vary) for p, t in lit], f'<path d="{shape}"/>')
-            side = right if light_x < px else left[::-1]
-            facet = poly(side + [(px + (side[-1][0] - px) * .28, base + 70)])
-            press.put(shade, f'<path d="{facet}"/>')
-            if peak in snowy:
-                snow_y = base - h + 16 + h * .16
-                jag = noise(rng, wl + wr, [(40, 7), (12, 3), (4, 1.4)])
-                band = poly([(px - wl, base - h - 10), (px + wr, base - h - 10)]
-                            + [(x, snow_y + jag(x - px + wl)) for x in range(int(px + wr), int(px - wl), -4)])
-                for cid, where, recipe in ((f"snow{len(press.defs)}", shape, []), (f"snow{len(press.defs)}s", facet, [("blue", .3)])):
-                    press.defs.append(f'<clipPath id="{cid}"><path d="{where}"/></clipPath>')
-                    press.put(recipe, f'<path d="{band}" clip-path="url(#{cid})"/>')
+def meteors(press, rng):
+    for _ in range(2):
+        x0, y0 = rng.uniform(120, W - 420), rng.uniform(70, 125)
+        path = f"M{x0:.0f} {y0:.0f}L{x0 + 250:.0f} {y0 + 62:.0f}"
+        press.glow(f'<g class="meteor" style="{glide(path, METEOR / FPS, -rng.uniform(0, METEOR / FPS), turn=True)}" fill="{on_paper("#FFFFFF")}">'
+                   f'<path d="M0 0L-64 -1.3L-64 1.3Z" opacity=".8"/><circle r="1.6"/></g>')
 
 
-def trees(press, contour, x0, x1, big, rng, month, wave):
-    """A hedge of round trees and pines along a hill's crest, bending as gusts pass.
-    Each stand of about 300px bends as one, which keeps the running animations few."""
-    x, stand, sx = x0, {}, x0
-
-    def bend():
-        crowns = {key: "".join(parts) for key, parts in stand.items()}
-        for key, d in crowns.items():
-            press.clear(f'<path d="{d}"/>')           # cut once at rest; the ink leans out of it in a gust
-            press.put(AUTUMN[key] if key >= 0 else DEEP, f'<g class="sway" style="{wave(sx)}"><path d="{d}"/></g>', knock=False, fine=True)
-        stand.clear()
-
-    while x < x1:
-        if x - sx > 300:
-            bend()
-            sx = x
-        cluster = []
-        turned = month in (9, 10, 11) and rng.random() < .15
-        for _ in range(rng.randint(2, 5)):
-            tx = x + rng.uniform(-6, 6)
-            ty = contour(tx) + 4
-            if not turned and rng.random() < .35:
-                s = rng.uniform(10, 18) * big
-                cluster.append(f"M{tx:.0f} {ty - s * 2:.0f}L{tx + s * .55:.0f} {ty:.0f}L{tx - s * .55:.0f} {ty:.0f}Z")
-            else:
-                r = rng.uniform(6, 12) * big
-                cluster.append(f'M{tx - r:.0f} {ty - r * .8:.0f}a{r:.0f} {r:.0f} 0 1 0 {2 * r:.0f} 0a{r:.0f} {r:.0f} 0 1 0 {-2 * r:.0f} 0Z'
-                               f'M{tx - 1.2:.1f} {ty - r * .5:.0f}h2.4V{ty:.0f}h-2.4Z')
-            x += rng.uniform(7, 16) * big
-        stand.setdefault(rng.randrange(len(AUTUMN)) if turned else -1, []).extend(cluster)
-        x += rng.uniform(4, 70) * big
-    bend()
+def fireflies(press, rng):
+    warm = on_paper(INK["yellow"])
+    for _ in range(4):
+        dots = []
+        for _ in range(5):
+            x = rng.uniform(70, 330) if rng.random() < .5 else rng.uniform(950, 1210)
+            y = rng.uniform(560, 668)
+            dots.append(f'<circle cx="{x:.0f}" cy="{y:.0f}" r="4.5" opacity=".3"/><circle cx="{x:.0f}" cy="{y:.0f}" r="1.5"/>')
+        press.glow(f'<g class="fly" style="{tempo(FLY / FPS, -rng.uniform(0, 2 * FLY / FPS))}" fill="{warm}">{"".join(dots)}</g>')
 
 
-def fields(press, months, top_a, top_b, rng, wave):
-    """Two bands of hill, cut into one field per month, oldest at the back left."""
-    peak = max(t for _, t in months) or 1
-    for band, (top, count, offset) in enumerate(((top_a, 7, 0), (top_b, 5, 7))):
-        cuts = [-60] + [-60 + (W + 120) * i / count + rng.uniform(-40, 40) for i in range(1, count)] + [W + 60]
-        slants = [0] + [rng.uniform(-40, 40) for _ in range(count - 1)] + [0]
-        for i in range(count):
-            label, total = months[offset + i]
-            m = int(label[5:7])
-            weight = math.sqrt(total / peak)
-            l_top, r_top = cuts[i] + slants[i], cuts[i + 1] + slants[i + 1]
-            l_foot, r_foot = cuts[i] - slants[i], cuts[i + 1] - slants[i + 1]
-            crest = [(x, top(x)) for x in range(int(l_top), int(r_top) + 1, 8)] + [(r_top, top(r_top))]
-            # the back band only runs a little way under the front one; nothing below is seen
-            foot = (lambda _: H + 20) if band else (lambda x: top_b(x) + 30)
-            sole = [(x, foot(x)) for x in range(int(r_foot), int(l_foot) - 1, -8)]
-            shape = poly([(l_foot, foot(l_foot))] + crest + [(r_foot, foot(r_foot))] + sole)
-            ground, plate = FIELD[m]
-            ref = press.put([(p, t * (.5 + .5 * weight)) for p, t in ground], f'<path d="{shape}"/>')
-            slope = math.degrees(math.atan2(top(r_top) - top(l_top), r_top - l_top))
-            kind = "dots" if m in (3, 4, 5) else rng.choice(("rows", "rows", "hatch"))
-            angle = slope + (rng.uniform(-25, 25) if kind == "rows" else 30)
-            size = 5 + 6 * (1 - weight) + 2 * band + 4 * (m in (12, 1, 2))   # frost furrows run sparse
-            press.raw(plate, f'<use href="{ref}" fill="{press.texture(plate, kind, angle, size, .25 + .3 * weight)}"/>')
-            if i:                                     # a hedge line where two fields meet
-                press.put([("yellow", 1), ("blue", 1)], f'<path d="M{l_top:.0f} {top(l_top) + 2:.0f}L{l_foot:.0f} {foot(l_foot):.0f}" '
-                                                        f'fill="none" stroke-width="{2 + band * 1.2:.1f}"/>', knock=False, paint="stroke")
-        trees(press, top, -20, W + 20, .8 + band * .35, rng, int(months[-1][0][5:7]), wave)
+def contrail(press, rng):
+    """A plane crossing high up, drawing its trail."""
+    y0, y1 = rng.uniform(95, 150), rng.uniform(80, 140)
+    x0, x1 = (rng.uniform(80, 300), rng.uniform(900, 1200))[::rng.choice((1, -1))]
+    path, length, begin = f"M{x0:.0f} {y0:.0f}L{x1:.0f} {y1:.0f}", TRAIL / FPS, -rng.uniform(0, 40)
+    press.glow(f'<path class="trail" pathLength="1" d="{path}" style="{tempo(length, begin)}" fill="none" stroke="{on_paper("#FFFFFF")}" stroke-width="2.4" stroke-linecap="round"/>'
+               f'<circle class="plane" r="1.8" fill="{INK["black"]}" style="{glide(path, length, begin)}"/>')
 
 
-def river(press, near, top_a, top_b, rng, period):
-    """A river from the gap in the mountains, widening as it comes down to the meadow."""
-    sx = min(range(620, 900, 4), key=lambda x: -near(x))
-    pts = [(sx, near(sx) + 6), (sx + 34, top_a(sx + 34) + 16), (sx - 24, 520), (sx + 70, top_b(sx + 70) + 20),
-           (sx + 20, 600), (sx + 150, 660), (sx + 260, 760)]
-    segs, toks = [], [float(v) for v in re.findall(r"-?\d+\.?\d*", spline(pts))]
-    cur = (toks[0], toks[1])
-    for i in range(2, len(toks), 6):
-        p = [(toks[i], toks[i + 1]), (toks[i + 2], toks[i + 3]), (toks[i + 4], toks[i + 5])]
-        segs.append((cur, *p))
-        cur = p[2]
-    centre = samples(segs, 3)
-    total = centre[-1][4]
-    left, right = [], []
-    for x, y, tx, ty, s in centre:
-        w = 2 + 70 * (s / total) ** 1.7
-        left.append((x - ty * w / 2, y + tx * w / 2))
-        right.append((x + ty * w / 2, y - tx * w / 2))
-    shape = poly(left + right[::-1])
-    press.defs.append(f'<clipPath id="river"><path d="{shape}"/></clipPath>')
-    press.put([("blue", .62)], f'<path d="{shape}"/>')
-    ripples = []
-    for lane in (-.3, 0, .3):
-        lane_pts = [(x + ty * lane * (2 + 70 * (s / total) ** 1.7), y - tx * lane * (2 + 70 * (s / total) ** 1.7)) for x, y, tx, ty, s in centre]
-        ripples.append(f'<path class="flow" style="{tempo(period * rng.uniform(.3, .45))}" d="{poly(lane_pts, False)}"/>')
-    press.raw("blue", f'<g clip-path="url(#river)" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round">{"".join(ripples)}</g>')
-
+def fireworks(press, rng):
+    """The night of the year's best day: fireworks over the lake, doubled in the water."""
+    white, yellow, pink = on_paper("#FFFFFF"), on_paper(INK["yellow"]), on_paper(INK["pink"])
+    sites = [(250, 205, 62, yellow), (1050, 180, 70, white), (165, 140, 44, yellow), (1150, 255, 48, pink), (330, 120, 54, white)]
+    for cx, cy, r, colour in sites:
+        cx, cy = cx + rng.uniform(-20, 20), cy + rng.uniform(-15, 15)
+        streaks, tips = [], []
+        for k in range(18):
+            a = 2 * math.pi * k / 18 + rng.uniform(-.07, .07)
+            c, s_ = math.cos(a), math.sin(a)
+            reach = r * rng.uniform(.88, 1.06)
+            i0, i1 = (cx + c * r * .3, cy + s_ * r * .3), (cx + c * reach, cy + s_ * reach)
+            streaks.append(poly([(i0[0] - s_ * .3, i0[1] + c * .3), (i1[0] - s_ * 1.1, i1[1] + c * 1.1),
+                                 (i1[0] + s_ * 1.1, i1[1] - c * 1.1), (i0[0] + s_ * .3, i0[1] - c * .3)]))
+            tips.append(f'<circle cx="{i1[0]:.1f}" cy="{i1[1]:.1f}" r="2.2"/>')
+        loop, begin = BURST / FPS, -rng.uniform(0, BURST / FPS)
+        burst = (f'<g class="burst" style="{tempo(loop, begin)}"><circle cx="{cx:.0f}" cy="{cy:.0f}" r="{r * 1.3:.0f}" fill="{colour}" opacity=".12"/>'
+                 f'<path d="{"".join(streaks)}" fill="{colour}"/><g fill="{white if colour != white else yellow}">{"".join(tips)}</g></g>')
+        rocket = f"M{cx + rng.uniform(-12, 12):.0f} {LAKE - 30}L{cx:.0f} {cy:.0f}"
+        press.glow(burst + f'<circle class="rocket" r="1.8" fill="{yellow}" style="{glide(rocket, loop, begin)}"/>')
+        press.glow(f'<g clip-path="url(#lake)" opacity=".5"><g transform="translate(0 {LAKE * (1 + REFLECT):.1f}) scale(1 {-REFLECT})">{burst}</g></g>')
 
 # ---------- the print ----------
 
@@ -820,257 +1089,48 @@ def garden(days, total, last, now):
     counts = [c for _, c in days]
     active = sorted(c for c in counts if c)
     cap = active[int(len(active) * 0.9)] if active else 1
+    budding = active[int(len(active) * .7)] if active else 1
     tone = lambda c: math.sqrt(min(c, cap) / cap)
     period = gust_period(days, total, last, now)
     period = beat(period / 4) * 4 / FPS                           # a gust in four equal beats
     wave = lambda x: f"--d:{beat((0.5 * x / W - 1) * period) / FPS:.4f}s"   # gusts roll left to right
     today, week = counts[-1], sum(counts[-7:])
+    fog = max(.15, min(1.0, 1.25 - .5 * week / max(1, total / 52.14)))
+    weeks = [sum(counts[i:i + 7]) for i in range(0, len(counts), 7)]
+    fortnight = sum(1 for c in counts[-14:] if c)
     press = Press()
+
+    idle = (now - last).total_seconds() / 3600 if last else 1e9
+    record = today > 0 and today >= max(counts[:-1] or [0])
+    luck = random.Random(pull.random())               # life moves about from print to print
+    when = season(now)
 
     edge, normals, flaps = tear(rng)
     tear_d = poly(edge)
-
-    # Land: mountains from weekly totals; fields from monthly; a meadow bank in front.
-    weeks = [sum(counts[i:i + 7]) for i in range(0, len(counts), 7)]
-    months = {}
-    for date, c in days:
-        months[date[:7]] = months.get(date[:7], 0) + c
-    months = list(months.items())[-12:]
-    ph = [rng.uniform(0, 6.3) for _ in range(6)]
-    top_a = lambda x: 478 - 26 * math.sin(x / 210 + ph[0]) - 12 * math.sin(x / 93 + ph[1])
-    top_b = lambda x: 560 - 22 * math.sin(x / 250 + ph[2]) - 10 * math.sin(x / 81 + ph[3])
-    bank = lambda x: 648 - 14 * math.sin(x / 170 + ph[4]) - 7 * math.sin(x / 61 + ph[5])
-
-    # the sky first, so the ridges can be cut out of it
-    ranges = ranges_for(weeks, random.Random(rng.random()))
-    far_y, near = (lambda x: ridge(ranges[0], x)), (lambda x: ridge(ranges[1], x))
-    skyline = [(x, far_y(x)) for x in range(-20, W + 21, 8)]
-    horizon = poly([(-20, -20), (W + 20, -20)] + [(x, y + 40) for x, y in reversed(skyline)])
-    press.defs.append(f'<clipPath id="sky"><path d="{horizon}"/></clipPath>')
-    fortnight = sum(1 for c in counts[-14:] if c)
-    name_pts, cross_pts, tend_pts = samples(place(NAME)), samples(place(CROSS)), samples(place(TENDRIL))
-    mood, light = sky(press, now, far_y, rng, fortnight, name_pts + cross_pts + tend_pts)
-    mountains(press, ranges, random.Random(rng.random()), light[0], mood)
-    fields(press, months, top_a, top_b, rng, wave)
-    river(press, near, top_a, top_b, rng, period)
+    mood, sun, day = sky(press, now, random.Random(rng.random()), edge)   # its draws vary with the hour; the land's must not
+    rs = ridges(weeks, random.Random(rng.random()))
+    drift = 18 + 30 * 8 / period
+    home = lambda x, y: cabin(press, x, y, mood, today, idle, drift)
+    ranges(press, rs, mood, fog, sun, wave, random.Random(rng.random()), when, home)
+    hand = pen_hand(press, random.Random(rng.random()))
+    lake(press, rs, mood, sun, today, hand, random.Random(rng.random()))
+    shore = bay(random.Random(rng.random()))
+    wader = heron(press, shore, luck) if mood != "night" else None
+    if idle < 1:
+        boat(press, mood, luck, wader)
+    reeds(press, days, counts, tone, cap, budding, wave, shore, random.Random(rng.random()))
+    name(press, hand, mood)
+    rises(press, mood, luck)
     if mood == "night":
-        press.raw("black", f'<rect y="200" width="{W}" height="{H}" fill="{press.ink("black", .22)}" clip-path="url(#land)"/>')
-    elif mood == "dusk":
-        press.raw("pink", f'<rect y="200" width="{W}" height="{H}" fill="{press.ink("pink", .2)}" clip-path="url(#land)"/>')
-    press.defs.append(f'<clipPath id="land"><path d="M-20 {H + 20}L{poly(skyline)[1:-1]}L{W + 20} {H + 20}Z"/></clipPath>')
-    bank_d = poly([(-20, H + 20)] + [(x, bank(x)) for x in range(-20, W + 21, 10)] + [(W + 20, H + 20)])
-    press.put([("yellow", .9), ("blue", .32)], f'<path d="{bank_d}"/>')
-    tufts = "".join(blade(x, bank(x) + rng.uniform(6, 30), rng.uniform(5, 12), rng.uniform(-4, 4), 1.6) for x in range(0, W, 9))
-    press.put([("blue", .7)], f'<path d="{tufts}"/>', knock=False)
+        meteors(press, luck)
+    if mood != "day" and when == "summer":
+        fireflies(press, luck)
+    if mood == "day" and luck.random() < .55:
+        contrail(press, luck)
+    if mood == "night" and record:                   # a bright sky would swallow them
+        fireworks(press, luck)
 
-    # Meadow: a stem per day; gusts roll through it a fortnight at a time. Every
-    # fortnight bends on the ground, the same point on each drum, so a flower stays on
-    # its stem.
-    pitch = (W - 120) / len(days)
-    budding = active[int(len(active) * .7)] if active else 1
-    for wk in range(0, len(days), 14):
-        gx = 60 + pitch * (wk + 7)
-        week_art = {p: [] for p in INK}
-        for di in range(wk, min(wk + 14, len(days))):
-            x = 60 + pitch * (di + 0.5) + rng.uniform(-1, 1)
-            c = counts[di]
-            h = 34 + 116 * tone(c) + rng.uniform(0, 10)
-            lean = rng.uniform(-10, 10)
-            month = int(days[di][0][5:7])
-            art = {p: [] for p in INK}
-            for p, t in rng.choice(LEAF[month]):
-                art[p].append(f'<path fill="{press.ink(p, min(1.0, t * 1.3))}" d="{blade(x, 704, h, lean, 2.6 + 1.8 * tone(c))}"/>')
-            fx, fy = x + lean, 704 - h
-            if c and c >= cap:
-                r = rng.uniform(6, 8.5)
-                parts = [(press.ref(f'<g transform="translate({fx:.1f} {fy:.1f})">{petals(r, 5, rng.uniform(0, 72))}</g>'), FLOWER[month], True),
-                         (press.ref(f'<circle cx="{fx:.1f}" cy="{fy:.1f}" r="{r * .32:.1f}"/>'),
-                          [("pink", .8)] if FLOWER[month][0][0] == "yellow" else [("yellow", 1)], True)]
-            elif c and c >= budding:
-                parts = [(press.ref(f'<ellipse cx="{fx:.1f}" cy="{fy:.1f}" rx="2.3" ry="3.6"/>'), [("yellow", 1), ("pink", .3)], False)]
-            else:
-                parts = []
-            for ref, recipe, knock in parts:
-                for p in press.knocks if knock else ():
-                    art[p].append(f'<use href="{ref}" fill="#fff"/>')
-                for p, t in recipe:
-                    art[p].append(f'<use href="{ref}" fill="{press.ink(p, t, True)}"/>')
-            for p, items in art.items():
-                week_art[p] += items
-        for p, items in week_art.items():
-            if items:
-                press.raw(p, f'<g class="gust" style="--o:{gx:.0f}px 704px;{wave(gx)}">{"".join(items)}</g>')
-
-    # The name, black over a blue hit for a rich inky black, cut clean out of the
-    # landscape and written in on load.
-    body = (ribbon(name_pts, pen(name_pts, 3.2, 19), rng) + ribbon(cross_pts, pen(cross_pts, 3, 10), rng)
-            + ribbon(tend_pts, pen(tend_pts, 2.4, 5.5), rng))
-    reveal = "".join(f'<path class="write" pathLength="1" d="{line(p)}" style="{tempo(dur, at)}"/>'
-                     for p, at, dur in ((name_pts, .6, 2.8), (cross_pts, 3.3, .5), (tend_pts, 3.7, .9)))
-    press.defs.append(f'<mask id="written" maskUnits="userSpaceOnUse" x="-20" y="-20" width="{W + 40}" height="{H + 40}">{reveal}</mask>')
-    press.clear(f'<path d="{body}" stroke="#fff" stroke-width="7" stroke-linejoin="round" mask="url(#written)"/>')
-    press.put([("blue", .85), ("black", 1)], f'<path d="{body}" mask="url(#written)"/>', knock=False)
-    press.knocks = tuple(INK)                          # from here on things sit over the name
-
-    total_len = name_pts[-1][4]
-    day_at = lambda length: round(min(1, max(0, length / total_len)) * (len(days) - 1))
-
-    # Leaves: one node every ~13px of vine, oldest day at the root; size and season from that day.
-    side = 1
-    for i in range(0, len(name_pts), 8):
-        x, y, tx, ty, length = name_pts[i]
-        if length < 24 or length > total_len - 20:
-            continue
-        di = day_at(length)
-        t = tone(sum(counts[max(0, di - 3):di + 4]) / 7)
-        if t < 0.12 and rng.random() > 0.3:
-            continue
-        size = 7 + 17 * t
-        side = -side
-        ang = math.degrees(math.atan2(ty, tx)) + side * rng.uniform(38, 62)
-        at = f'<g transform="translate({x:.1f} {y:.1f}) rotate({ang:.0f})"><g class="sprout" style="--d:{beat(1 + 2.6 * length / total_len) / FPS:.4f}s">'
-        vein = f'<path d="M{size * .12:.1f} 0Q{size * .5:.1f} {-size * .05:.1f} {size * .86:.1f} 0" fill="none" stroke="#fff" stroke-width=".9"/>' if size > 10 else ""
-        # the paper is cut once, a little wide, and holds still; only the ink flutters in
-        # it, and only on the leaves of busier days
-        press.clear(f'{at}<path d="{leaf(size)}" stroke="#fff" stroke-width="3" stroke-linejoin="round"/></g></g>')
-        flutter = f'class="lf" style="{tempo(rng.uniform(1.6, 2.8), -rng.uniform(0, 3))}"' if size > 15 else ""
-        press.put(rng.choice(LEAF[int(days[di][0][5:7])]), f'{at}<g {flutter}><path d="{leaf(size)}"/>{vein}</g></g></g>',
-                  knock=False, fine=True)
-
-    # The biggest weeks bloom on the vine, where their days fall along it.
-    blooms = []
-    top_week = max(weeks) or 1
-    for rank, k in enumerate(sorted(range(len(weeks)), key=lambda k: -weeks[k])[:7]):
-        target = total_len * (k * 7 + 3) / (len(days) - 1)
-        x, y, *_ = min(name_pts[30:-20], key=lambda p: abs(p[4] - target))
-        month = int(days[min(len(days) - 1, k * 7 + 3)][0][5:7])
-        blooms.append((x, y))
-        bloom(press, x, y, 9 + 8 * math.sqrt(weeks[k] / top_week), FLOWER[month], 4.2 + .15 * rank, rng)
-
-    # Today: the tendril's tip. A bud until there is work today, then a flower.
-    tip = (tend_pts[-1][0], tend_pts[-1][1])
-    if today:
-        bloom(press, tip[0], tip[1], 7 + 6 * tone(today), [("pink", 1)], 4.7, rng, pulse=True)
-    else:
-        bloom(press, tip[0], tip[1], 4.5, [("yellow", 1), ("blue", .3)], 4.7, rng, pulse=True)
-
-    # Big leaves close to the eye in the bottom corners, and fireflies after dark.
-    for cx, direction in ((70, 1), (W - 70, -1)):
-        for k in range(4):
-            size = rng.uniform(90, 150)
-            ang = -90 + direction * rng.uniform(15, 70)
-            veins = f'<path d="M{size * .08:.0f} 0L{size * .9:.0f} 0' + "".join(
-                f'M{size * f:.0f} 0l{size * .12:.0f} {s * size * .13:.0f}' for f in (.25, .42, .59, .74) for s in (-1, 1)) + '" fill="none" stroke="#fff" stroke-width="1.6"/>'
-            recipe = rng.choice([DEEP, LEAF[int(days[-1][0][5:7])][0], [("blue", .9), ("yellow", 1)]])
-            press.put(recipe, f'<g transform="translate({cx + direction * rng.uniform(0, 60):.0f} {rng.uniform(700, 730):.0f}) rotate({ang:.0f})">'
-                              f'<g class="bl" style="{tempo(rng.uniform(4, 6.5), -rng.uniform(0, 5))}"><path d="{leaf(size, .3)}"/>{veins}</g></g>',
-                      knock=False)                    # overprinted: a cut this size could not keep up with the sway
-    if mood == "night":
-        flies = []
-        for _ in range(16):
-            x, y = rng.uniform(80, W - 80), rng.uniform(420, 680)
-            loop = spline([(x + rng.uniform(-40, 40), y + rng.uniform(-30, 30)) for _ in range(4)], closed=True)
-            flies.append(f'<g class="blink" style="{tempo(rng.uniform(1.4, 3), -rng.uniform(0, 3))}">'
-                         f'<circle r="2.6" class="glide" style="{glide(loop, rng.uniform(9, 16), -rng.uniform(0, 16))}"/></g>')
-        press.glow(f'<g fill="{on_paper(INK["yellow"])}">{"".join(flies)}</g>')
-
-    # ---- loose in front of the page ----
-    press.layer = "free"
-
-    # grass and a cosmos flopping out over the bottom of the tear
-    n = len(edge)
-    lip = [edge[k] for k in range(n) if edge[k][1] > CY + RY * .82]
-    for side_x, direction, count in ((190, -1, 14), (1040, 1, 8)):
-        root = min(lip, key=lambda p: abs(p[0] - side_x))
-        clumps = [[] for _ in range(3)]                # each clump of blades bends as one
-        for k in range(count):
-            bx = root[0] + rng.uniform(-50, 50)
-            by = root[1] - rng.uniform(6, 30)
-            reach, rise, droop = rng.uniform(50, 150) * direction, rng.uniform(60, 160), rng.uniform(0, 60)
-            clumps[k % 3].append(arch((bx, by), (bx + reach * .1, by - rise * .7), (bx + reach * .6, by - rise), (bx + reach, by - rise * .55 + droop), rng.uniform(3, 5.5)))
-        for blades in clumps:
-            recipe = rng.choice([DEEP, [("yellow", 1), ("blue", .5)], [("yellow", 1), ("blue", .75)], [("yellow", 1), ("blue", .6)]])
-            press.put(recipe, f'<g class="bl" style="--o:{root[0]:.0f}px {root[1] - 18:.0f}px;{tempo(rng.uniform(2.6, 4), -rng.uniform(0, 4))}">'
-                              f'<path d="{"".join(blades)}"/></g>', knock=False)
-    root = min(lip, key=lambda p: abs(p[0] - 1110))
-    fx, fy = root[0] + 70, root[1] + 32
-    stem = arch((root[0] - 20, root[1] - 30), (root[0], root[1] - 140), (fx + 20, root[1] - 150), (fx, fy), 4)
-    sway = f'class="bl" style="--o:{root[0] - 20:.0f}px {root[1] - 30:.0f}px;{tempo(5.5, -2)}"'
-    press.put(DEEP, f'<g {sway}><path d="{stem}"/></g>', knock=False)
-    press.put([("pink", 1)], f'<g {sway}><g transform="translate({fx:.0f} {fy:.0f}) scale(1 .6)">{petals(22, 8, 10)}</g></g>')
-    press.put([("yellow", 1), ("pink", .4)], f'<g {sway}><ellipse cx="{fx:.0f}" cy="{fy - 2:.0f}" rx="7" ry="4.5"/></g>')
-
-    # ivy: the streak, climbing out of the tear and along the page, a pair of leaves a day
-    run = min(streak(counts), 60)
-    first = len(days) - run - (counts[-1] == 0)
-    if run:
-        start = min(range(n), key=lambda k: abs(math.remainder(math.atan2(edge[k][1] - CY, edge[k][0] - CX) + 1.95, 2 * math.pi)))
-        guide, length, k = [], 0.0, start
-        wander = noise(rng, 2000, [(140, 12), (45, 5)])
-        while length < run * 12 and len(guide) < n // 2:
-            (x, y), (nx, ny) = edge[k % n], normals[k % n]
-            out = min(1, length / 60) * (12 + wander(length)) - 12 * (1 - min(1, length / 60))
-            guide.append((x + nx * out, y + ny * out))
-            if len(guide) > 1:
-                length += math.dist(guide[-1], guide[-2])
-            k += 3
-        vine = spline(guide[::4])
-        press.put([("yellow", 1), ("blue", 1)], f'<path class="grow" pathLength="1" d="{vine}" fill="none" stroke-width="4.5" stroke-linecap="round"/>',
-                  knock=False, paint="stroke")
-        for d in range(run):
-            i = min(len(guide) - 2, int((d + .7) / run * (len(guide) - 1)))
-            (x0, y0), (x1, y1) = guide[i], guide[i + 1]
-            ang = math.degrees(math.atan2(y1 - y0, x1 - x0)) + (d % 2 * 2 - 1) * rng.uniform(35, 75)
-            recipe = rng.choice(LEAF[int(days[first + d][0][5:7])])
-            flutter = f'class="lf" style="{tempo(rng.uniform(1.6, 2.6), -rng.random() * 2)}"' if rng.random() < .5 else ""
-            press.put(recipe, f'<g transform="translate({x0:.1f} {y0:.1f}) rotate({ang:.0f})">'
-                              f'<g class="sprout" style="--d:{beat(1.2 + 2.4 * d / run) / FPS:.4f}s"><g {flutter}>'
-                              f'<path d="{leaf(rng.uniform(13, 19), .5)}"/></g></g></g>', knock=False, fine=True)
-
-    # this week's petals, blowing out through the tear on the wind
-    gone = []
-    for k in range(min(14, 4 + week // 40)):
-        x0, y0 = rng.uniform(260, 960), rng.uniform(300, 620)
-        if k % 2:                                     # out over the right edge
-            route = [(x0, y0), (x0 + 250, y0 + rng.uniform(-80, 40)), (1180, y0 + rng.uniform(-60, 60)), (1300, y0 + rng.uniform(-40, 80))]
-        else:                                         # tumbling down onto the page below
-            route = [(x0, y0), (x0 + 160, y0 + 60), (x0 + 300, 690), (x0 + 380 + rng.uniform(0, 120), 738)]
-        n = beat(period * rng.uniform(1.1, 1.8))
-        begin = -beat(rng.uniform(0, n / FPS)) / FPS
-        spin = f'class="spin" style="{tempo(rng.uniform(1.2, 3))}"'
-        shape = rng.choice([f'<ellipse rx="5.5" ry="2.8"/>', f'<path d="{leaf(11, .38)}" transform="translate(-5 0)"/>'])
-        recipe = rng.choice([[("pink", 1)], [("pink", .8), ("yellow", .4)], [("yellow", 1), ("blue", .4)], [("yellow", 1), ("pink", .6)]])
-        # in and out over three frames each, like ink thinning on the drum
-        fade = f"fade{k}"
-        press.keyframes.append(f"@keyframes {fade}{{" + "".join(
-            f"{100 * i / n:.3f}%{{opacity:{v:g}}}" for i, v in ((0, 0), (1, .35), (2, .7), (3, 1), (n - 3, .7), (n - 2, .35), (n - 1, 0))) + "}")
-        press.put(recipe, f'<g class="loose" style="{glide(spline(route), n / FPS, begin)};'
-                          f'animation:glide var(--t) steps(var(--k)) var(--d) infinite,{fade} var(--t) steps(1) var(--d) infinite">'
-                          f'<g {spin}>{shape}</g></g>', knock=False, fine=True)
-
-    # today's fallen petals, lying on the page under the tear
-    for k in range(min(10, today // 2)):
-        x = rng.uniform(300, 1000)
-        root = min(lip, key=lambda p: abs(p[0] - x))
-        y = root[1] + rng.uniform(9, 28)
-        gone.append((x, y, rng.uniform(0, 180)))
-        press.put(rng.choice([[("pink", 1)], [("pink", .8), ("yellow", .4)]]), f'<ellipse cx="{x:.0f}" cy="{y:.0f}" rx="5.5" ry="2.8" transform="rotate({gone[-1][2]:.0f} {x:.0f} {y:.0f})"/>', knock=False, fine=True)
-
-    # butterflies: none on a quiet day, up to three on a big one, visiting blooms and the page
-    wings = [[("pink", 1), ("yellow", .45)], [("yellow", 1), ("blue", .5)], [("blue", .9), ("pink", .3)]]
-    stops = blooms + [tip]
-    for b in range(0 if not today else 1 + (today >= active[len(active) // 2]) + (today >= cap)):
-        route = rng.sample(stops, min(4, len(stops)))
-        route = [(x + rng.uniform(-40, 40), y - rng.uniform(20, 70)) for x, y in route]
-        # it rests on the page, wings going, until it takes off
-        route.insert(0, rng.choice([(1250, rng.uniform(60, 300)), (rng.uniform(300, 900), 26), (30, rng.uniform(80, 400))]))
-        fly = f'<g class="bfly glide" style="{glide(spline(route, closed=True), rng.uniform(26, 36), 4 + b * 1.5, turn=True)}"><g transform="scale({rng.uniform(1, 1.3):.2f})">'
-        wing = (f'<ellipse cx="1" cy="-6" rx="6" ry="7.5" transform="rotate(-20)"/><ellipse cx="-4" cy="-4" rx="4.2" ry="5.2" transform="rotate(25)"/>'
-                f'<ellipse cx="1" cy="6" rx="6" ry="7.5" transform="rotate(20)"/><ellipse cx="-4" cy="4" rx="4.2" ry="5.2" transform="rotate(-25)"/>')
-        press.put(rng.choice(wings), f'{fly}<g class="wing" style="{tempo(2 / FPS)}">{wing}</g></g></g>', knock=False)
-        press.put([("black", 1)], f'{fly}<rect x="-6" y="-1.2" width="12" height="2.4" rx="1.2"/></g></g>', knock=False)
-
-    defs, layers = press.run(pull)
+    defs, world = press.run(pull)
     grain, mottle, pinholes = paper_tiles(random.Random(7))
     sx, sy = pull.uniform(0, 128), pull.uniform(0, 128)
     # Every motion steps on the shared clock: loops hold each pose one frame (`--k` frames
@@ -1081,44 +1141,61 @@ def garden(days, total, last, now):
     style = (
         "<style>"
         f".gust{{transform-box:view-box;transform-origin:var(--o);animation:gust {period:.4f}s steps({q}) var(--d) infinite}}"
-        "@keyframes gust{0%,100%{transform:skewX(0)}25%{transform:skewX(-8deg)}50%{transform:skewX(2.5deg)}75%{transform:skewX(-1.5deg)}}"
-        f".sway{{transform-box:fill-box;transform-origin:50% 100%;animation:sway {period:.4f}s steps({q}) var(--d) infinite}}"
-        "@keyframes sway{0%,100%{transform:skewX(0)}25%{transform:skewX(-4deg)}50%{transform:skewX(1.2deg)}75%{transform:skewX(-.5deg)}}"
-        f".bl{{transform-box:view-box;transform-origin:var(--o,0 0);animation:bl var(--t) {loop}}}"
-        "@keyframes bl{from{transform:rotate(-3.5deg)}to{transform:rotate(3.5deg)}}"
-        f".lf{{animation:lf var(--t) {loop}}}"
-        "@keyframes lf{from{transform:rotate(-7deg) scaleY(.9)}to{transform:rotate(7deg) scaleY(1.05)}}"
-        f".fl{{animation:lf var(--t) {loop}}}"
-        f".rays{{transform-box:view-box;animation:spin 150s steps({150 * FPS}) infinite}}"
-        ".spin{animation:spin var(--t) steps(var(--k)) infinite}"
+        "@keyframes gust{0%,100%{transform:skewX(0)}25%{transform:skewX(-7deg)}50%{transform:skewX(2deg)}75%{transform:skewX(-1.2deg)}}"
+        f".rays{{transform-box:view-box;animation:spin 240s steps({240 * FPS}) infinite}}"
         "@keyframes spin{to{transform:rotate(360deg)}}"
         ".cloud{animation:drift var(--t) steps(var(--k)) var(--d) infinite}"
-        "@keyframes drift{from{transform:translateX(-360px)}to{transform:translateX(1640px)}}"
-        f".star,.blink{{animation:star var(--t) {loop}}}"
+        "@keyframes drift{from{transform:translateX(-500px)}to{transform:translateX(1780px)}}"
+        ".mist{animation:mist var(--t) steps(var(--k)) var(--d) infinite}"
+        "@keyframes mist{from{transform:translateX(var(--a))}to{transform:translateX(var(--b))}}"
+        f".star{{animation:star var(--t) {loop}}}"
         "@keyframes star{from{opacity:1}to{opacity:.1}}"
         f".bird{{transform-box:fill-box;transform-origin:50% 100%;animation:bird var(--t) {loop}}}"
         "@keyframes bird{to{transform:scaleY(-.5)}}"
-        ".flow{stroke-dasharray:4 22;animation:flow var(--t) steps(var(--k)) infinite}"
-        "@keyframes flow{to{stroke-dashoffset:-26}}"
         ".glide{animation:glide var(--t) steps(var(--k)) var(--d) infinite}"
         "@keyframes glide{from{offset-distance:0%}to{offset-distance:100%}}"
-        + "".join(press.keyframes) +
-        f".wing{{transform-box:view-box;transform-origin:0 0;animation:flap var(--t) {loop}}}"
-        "@keyframes flap{to{transform:scaleY(.2)}}"
+        ".row{animation:row var(--t) var(--d) infinite}"
+        + stepped("row", [(0, "offset-distance:0%;opacity:0"), (54, "offset-distance:5%;opacity:1"),
+                          (ROW - 54, "offset-distance:95%;opacity:1"), (ROW, "offset-distance:100%;opacity:0")]) +
+        ".away{transform-origin:0 0;animation:away var(--t) var(--d) infinite}"
+        + stepped("away", [(0, "transform:scale(.2);opacity:0"), (22, "transform:scale(.36);opacity:1"), (FLOCK, "transform:scale(2.8);opacity:1")]) +
         f".flap{{transform-box:view-box;transform-origin:0 0;animation:open 1.25s backwards,lift {period:.4f}s steps({q}) calc(var(--d) + 1.25s) infinite}}"
         "@keyframes open{0%{transform:scaleY(-1);animation-timing-function:steps(9)}60%{transform:scaleY(1.08);animation-timing-function:steps(6)}}"
         "@keyframes lift{0%,100%{transform:none}25%{transform:scaleY(1.1) skewX(-3deg)}50%{transform:scaleY(.95)}75%{transform:scaleY(.98)}}"
-        ".write{fill:none;stroke:#fff;stroke-width:40;stroke-linecap:round;stroke-dasharray:1 1;"
+        f".rip{{animation:rip var(--t) {loop}}}"
+        "@keyframes rip{from{transform:translateX(calc(-1 * var(--x)))}to{transform:translateX(var(--x))}}"
+        ".ring{transform-box:fill-box;transform-origin:center;animation:ring var(--t) var(--d) infinite}"
+        + stepped("ring", [(0, "transform:scale(.15);opacity:0"), (4, "transform:scale(.3);opacity:1"),
+                           (36, "transform:scale(1.5);opacity:0"), (RING, "transform:scale(1.5);opacity:0")]) +
+        ".strike{transform-box:view-box;animation:strike var(--t) var(--d) infinite}"
+        + stepped("strike", [(0, "transform:none"), (101, "transform:none"), (106, "transform:rotate(-62deg)"),
+                             (113, "transform:rotate(-62deg)"), (STRIKE, "transform:none")]) +
+        ".smoke{transform-box:fill-box;transform-origin:center;animation:smoke var(--t) var(--d) infinite}"
+        + stepped("smoke", [(0, "transform:translate(0,0) scale(.4);opacity:0"),
+                            (7, "transform:translate(calc(var(--wx) * .113),-5.2px) scale(.65);opacity:.8"),
+                            (SMOKE, "transform:translate(var(--wx),-46px) scale(2.6);opacity:0")]) +
+        ".meteor{animation:meteor var(--t) var(--d) infinite}"
+        + stepped("meteor", [(0, "offset-distance:0%;opacity:0"), (1, "offset-distance:12%;opacity:1"),
+                             (9, "offset-distance:100%;opacity:0"), (METEOR, "offset-distance:100%;opacity:0")]) +
+        ".fly{animation:fly var(--t) var(--d) infinite alternate}"
+        + stepped("fly", [(0, "opacity:0"), (11, "opacity:0"), (22, "opacity:1"), (FLY, "opacity:1")]) +
+        ".trail{stroke-dasharray:1 1;animation:trail var(--t) var(--d) infinite}"
+        + stepped("trail", [(0, "stroke-dashoffset:1;opacity:.85"), (461, "stroke-dashoffset:0;opacity:.85"),
+                            (653, "stroke-dashoffset:0;opacity:0"), (TRAIL, "stroke-dashoffset:0;opacity:0")]) +
+        ".plane{animation:plane var(--t) var(--d) infinite}"
+        + stepped("plane", [(0, "offset-distance:0%;opacity:1"), (461, "offset-distance:100%;opacity:1"),
+                            (462, "offset-distance:100%;opacity:0"), (TRAIL, "offset-distance:100%;opacity:0")]) +
+        ".burst{transform-box:fill-box;transform-origin:center;animation:burst var(--t) var(--d) infinite}"
+        + stepped("burst", [(0, "transform:scale(.05) translateY(0);opacity:0"), (6, "transform:scale(.05) translateY(0);opacity:0"),
+                            (7, "transform:scale(.05) translateY(0);opacity:1"), (16, "transform:scale(1) translateY(3px);opacity:1"),
+                            (41, "transform:scale(1.1) translateY(18px);opacity:0"), (BURST, "transform:scale(1.1) translateY(18px);opacity:0")]) +
+        ".rocket{animation:rocket var(--t) var(--d) infinite}"
+        + stepped("rocket", [(0, "offset-distance:0%;opacity:1"), (6, "offset-distance:86%;opacity:1"),
+                             (7, "offset-distance:100%;opacity:0"), (BURST, "offset-distance:100%;opacity:0")]) +
+        ".write{fill:none;stroke:#fff;stroke-width:48;stroke-linecap:round;stroke-dasharray:1 1;"
         "animation:write var(--t) steps(var(--k)) var(--d) backwards}"
         "@keyframes write{from{stroke-dashoffset:1}to{stroke-dashoffset:0}}"
-        f".grow{{stroke-dasharray:1 1;animation:write 2.5s steps({beat(2.5)}) 1s backwards}}"
-        ".sprout{animation:sprout 1s var(--d) backwards}"
-        "@keyframes sprout{0%{transform:scale(0);animation-timing-function:steps(6)}50%{transform:scale(1.2);animation-timing-function:steps(3)}"
-        "75%{transform:scale(.94);animation-timing-function:steps(3)}100%{transform:none}}"
-        ".bloom{transform-box:fill-box;transform-origin:center;animation:sprout 1s var(--d) backwards}"
-        f".now{{transform-box:fill-box;transform-origin:center;animation:now 2.5s steps({beat(1.25)}) infinite}}"
-        "@keyframes now{50%{transform:scale(1.22)}}"
-        "@media (prefers-reduced-motion:reduce){*{animation:none!important}.bfly,.loose{display:none}}"
+        "@media (prefers-reduced-motion:reduce){*{animation:none!important}}"
         "</style>")
     tiles = (f'<pattern id="grain" width="96" height="96" patternUnits="userSpaceOnUse">'
              f'<image width="96" height="96" href="data:image/png;base64,{grain}"/></pattern>'
@@ -1127,36 +1204,23 @@ def garden(days, total, last, now):
              f'<pattern id="pinholes" width="160" height="160" patternUnits="userSpaceOnUse" patternTransform="translate({sx:.0f} {sy:.0f})">'
              f'<image width="160" height="160" style="image-rendering:pixelated" href="data:image/png;base64,{pinholes}"/></pattern>'
              f'<path id="tear" d="{tear_d}"/><clipPath id="hole"><use href="#tear"/></clipPath>'
-             f'<path id="paper-page" fill-rule="evenodd" d="M-80 -80H{W + 80}V{H + 80}H-80Z{tear_d}"/>')
+             f'<path id="paper-page" fill-rule="evenodd" d="M-80 -80H{W + 80}V{H + 80}H-80Z{tear_d}"/>'
+             f'<clipPath id="outside"><use href="#paper-page" clip-rule="evenodd"/></clipPath>')
     paper = "#%02X%02X%02X" % PAPER
     out = {}
     for theme in PAGE:
         shade, torn = page(theme, edge, normals, flaps, period, random.Random(11))
         out[theme] = (
             f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img">'
-            f'<title>{total:,} contributions in the last year, printed as a garden behind a tear in the page</title>{style}'
+            f'<title>{total:,} contributions in the last year, printed as a landscape behind a tear in the page</title>{style}'
             f'<defs>{defs}{tiles}</defs>'
-            # isolated, or Safari multiplies the loose inks into GitHub's dark page behind the image
+            # isolated, or Safari multiplies the inks into GitHub's dark page behind the image
             f'<g style="isolation:isolate">'
-            f'<g clip-path="url(#hole)"><rect width="{W}" height="{H}" fill="{paper}"/>{layers["world"]}'
-            f'<rect width="{W}" height="{H}" fill="url(#mottle)"/><rect width="{W}" height="{H}" fill="url(#pinholes)"/>'
+            f'<g clip-path="url(#hole)"><rect width="{W}" height="{H}" fill="{paper}"/>{world}'
+            f'<rect width="{W}" height="{H}" fill="url(#mottle)" opacity=".55"/><rect width="{W}" height="{H}" fill="url(#pinholes)"/>'
             f'<rect width="{W}" height="{H}" fill="url(#grain)" style="mix-blend-mode:multiply" opacity=".3"/>{shade}</g>'
-            f'{torn}{layers["free"]}</g></svg>')
+            f'{torn}{birds(fortnight, random.Random(3), theme) if day else ""}</g></svg>')
     return out
-
-
-def bloom(press, x, y, r, recipe, at, rng, pulse=False):
-    """Six-petal flower that opens at `at` seconds and then nods in the breeze; today's keeps breathing."""
-    turn = rng.uniform(0, 60)
-    opens = f'<g transform="translate({x:.1f} {y:.1f})"><g class="bloom" style="--d:{beat(at) / FPS:.4f}s">'
-    nod = f'class="fl" style="{tempo(rng.uniform(2.2, 3.4))}"'
-    wrap = lambda art: f'{opens}<g {nod}>' + (f'<g class="now">{art}</g>' if pulse else art) + "</g></g></g>"
-    if not pulse:                                     # the paper is cut once; only the ink nods in it
-        press.clear(f'{opens}<g stroke="#fff" stroke-width="2.5">{petals(r, 6, turn)}</g></g></g>')
-    press.put(recipe, wrap(petals(r, 6, turn)), knock=pulse, fine=True)
-    if r > 5:
-        centre = [("yellow", 1), ("pink", .5)] if recipe[0][0] != "yellow" else [("pink", .7)]
-        press.put(centre, wrap(f'<circle r="{r * .3:.1f}"/>'), knock=pulse, fine=True)
 
 
 if __name__ == "__main__":
