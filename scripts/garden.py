@@ -1136,10 +1136,12 @@ def garden(days, total, last, now):
             f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img">'
             f'<title>{total:,} contributions in the last year, printed as a garden behind a tear in the page</title>{style}'
             f'<defs>{defs}{tiles}</defs>'
+            # isolated, or Safari multiplies the loose inks into GitHub's dark page behind the image
+            f'<g style="isolation:isolate">'
             f'<g clip-path="url(#hole)"><rect width="{W}" height="{H}" fill="{paper}"/>{layers["world"]}'
             f'<rect width="{W}" height="{H}" fill="url(#mottle)"/><rect width="{W}" height="{H}" fill="url(#pinholes)"/>'
             f'<rect width="{W}" height="{H}" fill="url(#grain)" style="mix-blend-mode:multiply" opacity=".3"/>{shade}</g>'
-            f'{torn}{layers["free"]}</svg>')
+            f'{torn}{layers["free"]}</g></svg>')
     return out
 
 
