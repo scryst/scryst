@@ -24,7 +24,7 @@ jobs:
       - working-directory: dist
         run: |
           git init -q -b output
-          git add garden.svg
+          git add garden-light.svg garden-dark.svg
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -qm "Print $(date -u +%FT%RZ)"
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" output
