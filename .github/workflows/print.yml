@@ -1,7 +1,9 @@
 name: Print
 
 on:
-  schedule: [{ cron: "*/20 * * * *" }]
+  # GitHub drops scheduled runs under load, worst at the top of the hour; four
+  # off-peak tries an hour keep the sky close to the real one.
+  schedule: [{ cron: "12,24,36,48 * * * *" }]
   workflow_dispatch:
   push:
     branches: [main]
