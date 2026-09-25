@@ -1,8 +1,8 @@
 name: Print
 
 on:
-  # GitHub drops scheduled runs under load, worst at the top of the hour; four
-  # off-peak tries an hour keep the sky close to the real one.
+  # GitHub drops most scheduled runs, so the `next` job below keeps time; the
+  # schedule only restarts that chain if it ever breaks.
   schedule: [{ cron: "12,24,36,48 * * * *" }]
   workflow_dispatch:
   push:
@@ -11,12 +11,12 @@ on:
 
 permissions:
   contents: write
-
-concurrency: print
+  actions: write
 
 jobs:
   print:
     runs-on: ubuntu-latest
+    concurrency: print
     steps:
       - uses: actions/checkout@v7
       - run: python3 scripts/garden.py dist
@@ -30,3 +30,26 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit -qm "Print $(date -u +%FT%RZ)"
           git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" output
+
+  # The clock: the `clock` environment's wait timer holds this job for 19 minutes
+  # without a runner, then it asks for the next print. It yields to any newer run
+  # still going, so extra chains fold into one, and it stops if it did not wait,
+  # so a missing timer cannot spin. Cancelling a run, or `gh workflow disable
+  # print.yml`, stops the chain.
+  next:
+    needs: print
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    environment: { name: clock, deployment: false }
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - run: |
+          started=$(gh run view "$GITHUB_RUN_ID" -R "$GITHUB_REPOSITORY" --json createdAt --jq .createdAt)
+          waited=$(( $(date +%s) - $(date -d "$started" +%s) ))
+          newer=$(gh run list -R "$GITHUB_REPOSITORY" -w print.yml -L 20 --json databaseId,status \
+            --jq "[.[] | select(.databaseId > $GITHUB_RUN_ID and .status != \"completed\")] | length")
+          echo "waited ${waited}s, newer runs going: $newer"
+          [[ $waited =~ ^[0-9]+$ && $newer =~ ^[0-9]+$ ]] || { echo "could not read the run state"; exit 1; }
+          if [ "$waited" -lt 900 ]; then echo "no wait timer on clock; not chaining"; exit 0; fi
+          if [ "$newer" -eq 0 ]; then gh workflow run print.yml -R "$GITHUB_REPOSITORY" --ref main; fi
