@@ -99,5 +99,25 @@ class PrintAt(unittest.TestCase):
         self.assertSame(print_svgs("2026-11-04T20:00", COUNTS), print_svgs("2026-11-04T20:00Z", COUNTS))
 
 
+
+class Today(unittest.TestCase):
+    """The calendar's days are UTC, so at night in Los Angeles its last day is already tomorrow."""
+    LA_NIGHT = "2026-11-05T05:00Z"                    # 21:00 on Nov 4 in Los Angeles
+
+    def fireworks(self, *args, **kw):
+        return 'class="burst"' in print_svgs(*args, **kw)["light"]
+
+    def test_record_day_ends_in_fireworks_after_utc_midnight(self):
+        counts = COUNTS[:-2] + [50, 2]                # Nov 4 is the year's best; Nov 5 (UTC) has begun
+        self.assertTrue(self.fireworks(self.LA_NIGHT, counts))
+
+    def test_ordinary_night_has_none(self):
+        self.assertFalse(self.fireworks(self.LA_NIGHT, COUNTS))
+
+    def test_record_on_the_last_day_still_fires(self):
+        counts = COUNTS[:-1] + [50]
+        self.assertTrue(self.fireworks("2026-11-06T05:00Z", counts))
+
+
 if __name__ == "__main__":
     unittest.main()

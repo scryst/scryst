@@ -1095,14 +1095,17 @@ def garden(days, total, last, now):
     period = gust_period(days, total, last, now)
     period = beat(period / 4) * 4 / FPS                           # a gust in four equal beats
     wave = lambda x: f"--d:{beat((0.5 * x / W - 1) * period) / FPS:.4f}s"   # gusts roll left to right
-    today, week = counts[-1], sum(counts[-7:])
+    # The calendar's days are UTC; "today" is the Los Angeles day, so the evening keeps its own work.
+    dates, la = [d for d, _ in days], now.astimezone(LA).date().isoformat()
+    at = dates.index(la) if la in dates else len(counts) - 1
+    today, week = counts[at], sum(counts[-7:])
     fog = max(.15, min(1.0, 1.25 - .5 * week / max(1, total / 52.14)))
     weeks = [sum(counts[i:i + 7]) for i in range(0, len(counts), 7)]
     fortnight = sum(1 for c in counts[-14:] if c)
     press = Press()
 
     idle = (now - last).total_seconds() / 3600 if last else 1e9
-    record = today > 0 and today >= max(counts[:-1] or [0])
+    record = today > 0 and today >= max(counts[:at] + counts[at + 1:] or [0])
     luck = random.Random(pull.random())               # life moves about from print to print
     when = season(now)
 
