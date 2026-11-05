@@ -789,18 +789,15 @@ def ranges(press, rs, mood, fog, sun, wave, rng, when, home):
             snow = poly(ridge + [(x, max(y(x), level + line(x + 20))) for x in range(W + 20, -21, -3)])
             press.clear(f'<path d="{snow}"/>')
             press.put([("blue", .2 if mood != "night" else .5)], f'<path d="{snow}" clip-path="url(#f{k})"/>', knock=False)
-        rim = poly(ridge, False)
-        if k > 3:                                        # the near ranges are lit only where the sun catches them
-            if k == 5:
-                spot = clearing(y, base, rng)
-                pines(press, y, base, mood, wave, rng, when, spot)
-                if spot:
-                    home(spot, y)
-            if k in wisps:
-                mist(press, base + 14, rng, mood)
-            continue
-        press.clear(f'<path d="{rim}" fill="none" stroke="#fff" stroke-width="{1.8 + .2 * k:.1f}" stroke-linejoin="round"/>', paint="stroke")
-        press.put(RIM[mood], f'<path d="{rim}" fill="none" stroke-width="{1 + .15 * k:.1f}" stroke-linejoin="round"/>', knock=False, paint="stroke")
+        if k == 5:
+            spot = clearing(y, base, rng)
+            pines(press, y, base, mood, wave, rng, when, spot)
+            if spot:
+                home(spot, y)
+        elif k <= 3:                                     # a rim of light; the near ranges are lit only where the sun catches them
+            rim = poly(ridge, False)
+            press.clear(f'<path d="{rim}" fill="none" stroke="#fff" stroke-width="{1.8 + .2 * k:.1f}" stroke-linejoin="round"/>', paint="stroke")
+            press.put(RIM[mood], f'<path d="{rim}" fill="none" stroke-width="{1 + .15 * k:.1f}" stroke-linejoin="round"/>', knock=False, paint="stroke")
         if k in wisps:                                   # in the valley, behind the next range
             mist(press, base + 14, rng, mood)
 
