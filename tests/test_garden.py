@@ -30,55 +30,40 @@ def calendar(end, counts):
         "totalContributions": sum(counts), "weeks": weeks}}}}}
 
 
-def stub(cal, events):
-    def api(path, token, body=None):
-        if path == "graphql":
-            return cal
+def network(cal, events):
+    """Stub GitHub: the GraphQL calendar, and the events page (raised if it is an exception)."""
+    def urlopen(req, timeout=None):
+        if req.full_url.endswith("graphql"):
+            return io.BytesIO(json.dumps(cal).encode())
         if isinstance(events, Exception):
             raise events
-        return events
-    return api
+        return io.BytesIO(json.dumps(events).encode())
+    return mock.patch.object(urllib.request, "urlopen", urlopen)
 
 
 class Activity(unittest.TestCase):
-    def setUp(self):
-        self.real = garden.api
-        self.cal = calendar(dt.date(2026, 11, 4), [1] * 371)
+    CAL = calendar(dt.date(2026, 11, 4), [1] * 371)
 
-    def tearDown(self):
-        garden.api = self.real
+    def last_push(self, events):
+        with network(self.CAL, events):
+            return garden.activity("scryst", "x")[2]
 
     def test_latest_push_skips_other_events(self):
-        garden.api = stub(self.cal, [{"type": "WatchEvent", "created_at": "2026-11-04T20:00:00Z"},
-                                     {"type": "PushEvent", "created_at": "2026-11-04T17:00:00Z"}])
-        _, _, last = garden.activity("scryst", "x")
-        self.assertEqual(last, dt.datetime(2026, 11, 4, 17, tzinfo=UTC))
+        self.assertEqual(self.last_push([{"type": "WatchEvent", "created_at": "2026-11-04T20:00:00Z"},
+                                         {"type": "PushEvent", "created_at": "2026-11-04T17:00:00Z"}]),
+                         dt.datetime(2026, 11, 4, 17, tzinfo=UTC))
 
-    def test_no_push_in_the_page_is_none(self):
-        garden.api = stub(self.cal, [{"type": "WatchEvent", "created_at": "2026-11-04T20:00:00Z"}])
-        self.assertIsNone(garden.activity("scryst", "x")[2])
-
-    def test_events_failure_never_fails_the_print(self):
-        for bad in (OSError("down"), {"message": "rate limited"}, [{"type": "PushEvent"}]):
-            garden.api = stub(self.cal, bad)
-            self.assertIsNone(garden.activity("scryst", "x")[2])
+    def test_no_push_or_a_bad_page_is_none_and_never_fails_the_print(self):
+        for events in ([{"type": "WatchEvent", "created_at": "2026-11-04T20:00:00Z"}],
+                       OSError("down"), {"message": "rate limited"}, [{"type": "PushEvent"}]):
+            with self.subTest(events=events):
+                self.assertIsNone(self.last_push(events))
 
 
-class Response(io.BytesIO):
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *exc):
-        return False
-
-
-def print_svgs(print_at, counts, end=dt.date(2026, 11, 5), events=()):
+def print_svgs(print_at, counts, end=dt.date(2026, 11, 5)):
     """Run the script as the workflow does, network stubbed; return {theme: svg}."""
-    cal = calendar(end, counts)
-    events = list(events) or [{"type": "PushEvent", "created_at": "2026-11-04T18:00:00Z"}]
-    fake = lambda req, timeout=None: Response(json.dumps(cal if req.full_url.endswith("graphql") else events).encode())
-    with tempfile.TemporaryDirectory() as out, redirect_stdout(io.StringIO()), \
-            mock.patch.object(urllib.request, "urlopen", fake), \
+    events = [{"type": "PushEvent", "created_at": "2026-11-04T18:00:00Z"}]
+    with tempfile.TemporaryDirectory() as out, redirect_stdout(io.StringIO()), network(calendar(end, counts), events), \
             mock.patch.dict(os.environ, {"GH_TOKEN": "x", "PRINT_AT": print_at}), \
             mock.patch.object(sys, "argv", [str(SRC), out]):
         runpy.run_path(str(SRC), run_name="__main__")
@@ -89,34 +74,23 @@ COUNTS = [(i * 7) % 11 for i in range(371)]
 
 
 class PrintAt(unittest.TestCase):
-    def assertSame(self, a, b):
-        self.assertTrue(a == b, "the prints differ")
-
-    def test_offset_is_the_same_instant_as_utc(self):
-        self.assertSame(print_svgs("2026-11-04T12:00-08:00", COUNTS), print_svgs("2026-11-04T20:00Z", COUNTS))
-
-    def test_naive_is_utc(self):
-        self.assertSame(print_svgs("2026-11-04T20:00", COUNTS), print_svgs("2026-11-04T20:00Z", COUNTS))
-
+    def test_an_offset_or_no_zone_is_the_same_instant_as_utc(self):
+        utc = print_svgs("2026-11-04T20:00Z", COUNTS)
+        for at in ("2026-11-04T12:00-08:00", "2026-11-04T20:00"):     # an offset; naive reads as UTC
+            with self.subTest(at=at):
+                self.assertTrue(print_svgs(at, COUNTS) == utc, "the prints differ")   # not assertEqual: its diff of ~430KB runs for minutes
 
 
 class Today(unittest.TestCase):
     """The calendar's days are UTC, so at night in Los Angeles its last day is already tomorrow."""
-    LA_NIGHT = "2026-11-05T05:00Z"                    # 21:00 on Nov 4 in Los Angeles
 
-    def fireworks(self, *args, **kw):
-        return 'class="burst"' in print_svgs(*args, **kw)["light"]
-
-    def test_record_day_ends_in_fireworks_after_utc_midnight(self):
-        counts = COUNTS[:-2] + [50, 2]                # Nov 4 is the year's best; Nov 5 (UTC) has begun
-        self.assertTrue(self.fireworks(self.LA_NIGHT, counts))
-
-    def test_ordinary_night_has_none(self):
-        self.assertFalse(self.fireworks(self.LA_NIGHT, COUNTS))
-
-    def test_record_on_the_last_day_still_fires(self):
-        counts = COUNTS[:-1] + [50]
-        self.assertTrue(self.fireworks("2026-11-06T05:00Z", counts))
+    def test_fireworks_on_the_night_of_the_record_day(self):
+        for at, counts, fires in (
+                ("2026-11-05T05:00Z", COUNTS[:-2] + [50, 2], True),   # 21:00 Nov 4 in LA, the best day; Nov 5 (UTC) has begun
+                ("2026-11-05T05:00Z", COUNTS, False),                 # an ordinary night
+                ("2026-11-06T05:00Z", COUNTS[:-1] + [50], True)):     # the record on the calendar's last day
+            with self.subTest(at=at, fires=fires):
+                self.assertEqual('class="burst"' in print_svgs(at, counts)["light"], fires)
 
 
 if __name__ == "__main__":
