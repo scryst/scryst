@@ -1,7 +1,16 @@
 """Offline checks for scripts/garden.py: the GitHub API is stubbed, so no network or token."""
 import datetime as dt
 import importlib.util
+import io
+import json
+import os
+import runpy
+import sys
+import tempfile
 import unittest
+import urllib.request
+from contextlib import redirect_stdout
+from unittest import mock
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parent.parent / "scripts" / "garden.py"
@@ -53,6 +62,41 @@ class Activity(unittest.TestCase):
         for bad in (OSError("down"), {"message": "rate limited"}, [{"type": "PushEvent"}]):
             garden.api = stub(self.cal, bad)
             self.assertIsNone(garden.activity("scryst", "x")[2])
+
+
+class Response(io.BytesIO):
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+
+def print_svgs(print_at, counts, end=dt.date(2026, 11, 5), events=()):
+    """Run the script as the workflow does, network stubbed; return {theme: svg}."""
+    cal = calendar(end, counts)
+    events = list(events) or [{"type": "PushEvent", "created_at": "2026-11-04T18:00:00Z"}]
+    fake = lambda req, timeout=None: Response(json.dumps(cal if req.full_url.endswith("graphql") else events).encode())
+    with tempfile.TemporaryDirectory() as out, redirect_stdout(io.StringIO()), \
+            mock.patch.object(urllib.request, "urlopen", fake), \
+            mock.patch.dict(os.environ, {"GH_TOKEN": "x", "PRINT_AT": print_at}), \
+            mock.patch.object(sys, "argv", [str(SRC), out]):
+        runpy.run_path(str(SRC), run_name="__main__")
+        return {t: (Path(out) / f"garden-{t}.svg").read_text() for t in ("light", "dark")}
+
+
+COUNTS = [(i * 7) % 11 for i in range(371)]
+
+
+class PrintAt(unittest.TestCase):
+    def assertSame(self, a, b):
+        self.assertTrue(a == b, "the prints differ")
+
+    def test_offset_is_the_same_instant_as_utc(self):
+        self.assertSame(print_svgs("2026-11-04T12:00-08:00", COUNTS), print_svgs("2026-11-04T20:00Z", COUNTS))
+
+    def test_naive_is_utc(self):
+        self.assertSame(print_svgs("2026-11-04T20:00", COUNTS), print_svgs("2026-11-04T20:00Z", COUNTS))
 
 
 if __name__ == "__main__":

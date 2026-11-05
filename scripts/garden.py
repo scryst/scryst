@@ -1228,6 +1228,7 @@ if __name__ == "__main__":
     out = Path(sys.argv[1] if len(sys.argv) > 1 else "dist")
     login = os.environ.get("PROFILE_LOGIN") or os.environ.get("GITHUB_REPOSITORY_OWNER") or "scryst"
     now = dt.datetime.fromisoformat(os.environ["PRINT_AT"]) if os.environ.get("PRINT_AT") else dt.datetime.now(dt.timezone.utc)
+    now = now.replace(tzinfo=dt.timezone.utc) if now.tzinfo is None else now.astimezone(dt.timezone.utc)   # the sky reads UTC hours
     days, total, last = activity(login, os.environ["GH_TOKEN"])
     out.mkdir(parents=True, exist_ok=True)
     for theme, svg in garden(days, total, last, now).items():
