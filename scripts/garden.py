@@ -172,26 +172,21 @@ class Press:
         self.knocks = tuple(INK)
         self.screens, self.defs = {}, []
 
-    def ink(self, plate, tone):
-        """A drum's ink at a tone: solid, or a dot screen."""
-        if tone >= 0.97:
-            return INK[plate]
-        pid = f"{plate}{round(tone * 100)}"
+    def screen(self, pid, tone, angle, colour):
+        """A dot screen covering `tone` of the area, defined once per id."""
         if pid not in self.screens:
             r = 4.6 * math.sqrt(tone / math.pi)
             self.screens[pid] = (f'<pattern id="{pid}" width="4.6" height="4.6" patternUnits="userSpaceOnUse" '
-                                 f'patternTransform="rotate({ANGLE[plate]})"><circle cx="2.3" cy="2.3" '
-                                 f'r="{r:.2f}" fill="{INK[plate]}"/></pattern>')
+                                 f'patternTransform="rotate({angle})"><circle cx="2.3" cy="2.3" r="{r:.2f}" fill="{colour}"/></pattern>')
         return f"url(#{pid})"
+
+    def ink(self, plate, tone):
+        """A drum's ink at a tone: solid, or a dot screen."""
+        return INK[plate] if tone >= 0.97 else self.screen(f"{plate}{round(tone * 100)}", tone, ANGLE[plate], INK[plate])
 
     def veil(self, tone):
         """A reverse screen: paper dots knocked through the ink, for thin mist."""
-        pid = f"veil{round(tone * 100)}"
-        if pid not in self.screens:
-            r = 4.6 * math.sqrt(tone / math.pi)
-            self.screens[pid] = (f'<pattern id="{pid}" width="4.6" height="4.6" patternUnits="userSpaceOnUse" '
-                                 f'patternTransform="rotate(30)"><circle cx="2.3" cy="2.3" r="{r:.2f}" fill="#fff"/></pattern>')
-        return f"url(#{pid})"
+        return self.screen(f"veil{round(tone * 100)}", tone, 30, "#fff")
 
     def raw(self, plate, svg):
         self.plates[plate].append(svg)
@@ -315,10 +310,6 @@ def ribbon(pts, widths, rng):
             right.append((x + ty * wr, y - tx * wr))
         d.append("M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in left + right[::-1]) + "Z")
     return "".join(d)
-
-
-def line(pts, every=3):
-    return "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y, *_ in pts[::every])
 
 
 def poly(pts, close=True):
@@ -927,7 +918,7 @@ def pen_hand(press, rng):
     pts, cross, tend = samples(place(NAME)), samples(place(CROSS)), samples(place(TENDRIL))
     body = (ribbon(pts, pen(pts, 4.6 * k, 36 * k), rng) + ribbon(cross, pen(cross, 3.6 * k, 13 * k), rng)
             + ribbon(tend, pen(tend, 3 * k, 8 * k), rng))
-    reveal = "".join(f'<path class="write" pathLength="1" d="{line(p)}" style="{tempo(dur, at)}"/>'
+    reveal = "".join(f'<path class="write" pathLength="1" d="{poly([q[:2] for q in p[::3]], False)}" style="{tempo(dur, at)}"/>'
                      for p, at, dur in ((pts, .6, 2.6), (cross, 3.1, .4), (tend, 3.4, .8)))
     press.defs.append(f'<mask id="written" maskUnits="userSpaceOnUse" x="-20" y="-20" width="{W + 40}" height="{H + 40}">{reveal}</mask>')
     return press.ref(f'<path d="{body}"/>')
