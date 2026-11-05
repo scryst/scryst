@@ -476,12 +476,7 @@ def paper_tiles(rng):
             row += bytes((*PAPER, int(max(0, v - 0.45) * 190)))
         rows.append(bytes(row))
     mottle = png(64, 64, rows, 6)
-    holes = []
-    for y in range(128):
-        row = bytearray()
-        for x in range(128):
-            row += bytes((*PAPER, 255 if rng.random() < 0.009 else 0))
-        holes.append(bytes(row))
+    holes = [b"".join(bytes((*PAPER, 255 if rng.random() < 0.009 else 0)) for _ in range(128)) for _ in range(128)]
     pinholes = png(128, 128, holes, 6)
     return grain, mottle, pinholes
 
