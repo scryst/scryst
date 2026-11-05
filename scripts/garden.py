@@ -157,13 +157,6 @@ def activity(login, token):
     return days, cal["totalContributions"], last
 
 
-def gust_period(days, total, last, now):
-    pace = sum(c for _, c in days[-7:]) / max(1, total / 52.14)
-    idle = (now - last).total_seconds() / 3600 if last else 1e9
-    heat = 1.0 if idle < 1 else 0.5 if idle < 6 else 0.0
-    return max(3.5, min(14.0, 11 / math.sqrt(max(pace, 0.25)) / (1 + heat)))
-
-
 # ---------- the press ----------
 
 class Press:
@@ -1092,19 +1085,21 @@ def garden(days, total, last, now):
     cap = active[int(len(active) * 0.9)] if active else 1
     budding = active[int(len(active) * .7)] if active else 1
     tone = lambda c: math.sqrt(min(c, cap) / cap)
-    period = gust_period(days, total, last, now)
+    pace = sum(counts[-7:]) / max(1, total / 52.14)                # this week against the year's average
+    idle = (now - last).total_seconds() / 3600 if last else 1e9   # hours since the last push
+    heat = 1.0 if idle < 1 else 0.5 if idle < 6 else 0.0
+    period = max(3.5, min(14.0, 11 / math.sqrt(max(pace, 0.25)) / (1 + heat)))
     period = beat(period / 4) * 4 / FPS                           # a gust in four equal beats
     wave = lambda x: f"--d:{beat((0.5 * x / W - 1) * period) / FPS:.4f}s"   # gusts roll left to right
     # The calendar's days are UTC; "today" is the Los Angeles day, so the evening keeps its own work.
     dates, la = [d for d, _ in days], now.astimezone(LA).date().isoformat()
     at = dates.index(la) if la in dates else len(counts) - 1
-    today, week = counts[at], sum(counts[-7:])
-    fog = max(.15, min(1.0, 1.25 - .5 * week / max(1, total / 52.14)))
+    today = counts[at]
+    fog = max(.15, min(1.0, 1.25 - .5 * pace))
     weeks = [sum(counts[i:i + 7]) for i in range(0, len(counts), 7)]
     fortnight = sum(1 for c in counts[-14:] if c)
     press = Press()
 
-    idle = (now - last).total_seconds() / 3600 if last else 1e9
     record = today > 0 and today >= max(counts[:at] + counts[at + 1:] or [0])
     luck = random.Random(pull.random())               # life moves about from print to print
     when = season(now)
