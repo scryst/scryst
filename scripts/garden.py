@@ -149,9 +149,10 @@ def activity(login, token):
     cal = body["data"]["user"]["contributionsCollection"]["contributionCalendar"]
     days = [(d["date"], d["contributionCount"]) for w in cal["weeks"] for d in w["contributionDays"]]
     try:                                             # recency only nudges the wind; never fail on it
-        events = api(f"users/{login}/events?per_page=1", token)
-        last = dt.datetime.fromisoformat(events[0]["created_at"].replace("Z", "+00:00"))
-    except (OSError, IndexError, KeyError, ValueError):
+        events = api(f"users/{login}/events?per_page=30", token)
+        last = next((dt.datetime.fromisoformat(e["created_at"].replace("Z", "+00:00"))
+                     for e in events if e["type"] == "PushEvent"), None)
+    except (OSError, KeyError, TypeError, ValueError):
         last = None
     return days, cal["totalContributions"], last
 
