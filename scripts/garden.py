@@ -169,7 +169,6 @@ class Press:
     def __init__(self):
         self.plates = {p: [] for p in INK}
         self.over = []
-        self.knocks = tuple(INK)
         self.screens, self.defs = {}, []
 
     def screen(self, pid, tone, angle, colour):
@@ -212,7 +211,7 @@ class Press:
 
     def clear(self, svg, plates=None, paint="fill"):
         ref = self.ref(svg)
-        for plate in plates or self.knocks:
+        for plate in plates or INK:
             self.raw(plate, f'<use href="{ref}" {paint}="#fff"/>')
         return ref
 
@@ -597,7 +596,7 @@ def sky(press, now, rng, edge):
             if plate == belly[0]:
                 art += f'<rect x="{-span:.0f}" y="1" width="{span * 2:.0f}" height="20" clip-path="url(#st{k})" fill="{press.ink(*belly)}"/>'
             press.raw(plate, wrap + art + "</g></g></g>")
-    return mood, (sx, sy), day
+    return mood, (sx, sy)
 
 
 # ---------- land and water ----------
@@ -1094,7 +1093,7 @@ def garden(days, total, last, now):
 
     edge, normals, flaps = tear(rng)
     tear_d = poly(edge)
-    mood, sun, day = sky(press, now, random.Random(rng.random()), edge)   # its draws vary with the hour; the land's must not
+    mood, sun = sky(press, now, random.Random(rng.random()), edge)   # its draws vary with the hour; the land's must not
     rs = ridges(weeks, random.Random(rng.random()))
     drift = 18 + 30 * 8 / period
     home = lambda x, y: cabin(press, x, y, mood, today, idle, drift)
@@ -1206,7 +1205,7 @@ def garden(days, total, last, now):
             f'<g clip-path="url(#hole)"><rect width="{W}" height="{H}" fill="{paper}"/>{world}'
             f'<rect width="{W}" height="{H}" fill="url(#mottle)" opacity=".55"/><rect width="{W}" height="{H}" fill="url(#pinholes)"/>'
             f'<rect width="{W}" height="{H}" fill="url(#grain)" style="mix-blend-mode:multiply" opacity=".3"/>{shade}</g>'
-            f'{torn}{birds(fortnight, random.Random(3), theme) if day else ""}</g></svg>')
+            f'{torn}{birds(fortnight, random.Random(3), theme) if mood != "night" else ""}</g></svg>')
     return out
 
 
