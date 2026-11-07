@@ -9,8 +9,9 @@ out=${1:-"$here/../../banner"}
 frames=$(mktemp -d)
 cd "$here"
 python3 anim.py 1280 448 96 "$frames" 0 2 &
+half0=$!
 python3 anim.py 1280 448 96 "$frames" 1 2
-wait
+wait "$half0"
 mkdir -p "$out"
 for m in dark plate; do
   img2webp -loop 0 -lossy -q 82 -m 6 -sharp_yuv -d 83 "$frames"/$m*.png -o "$frames/$m.webp"
