@@ -7,7 +7,8 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 out=${1:-"$here/../../banner"}
 frames=$(mktemp -d)
-trap 'rm -rf "$frames"' EXIT
+# wait first: if one half crashes, the other is still writing frames into the dir.
+trap 'wait; rm -rf "$frames"' EXIT
 cd "$here"
 python3 anim.py 1280 448 96 "$frames" 0 2 &
 half0=$!
