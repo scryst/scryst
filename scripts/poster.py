@@ -1,7 +1,7 @@
 """Print the profile poster: python3 scripts/poster.py <out-dir> [--at 2026-11-06T20:00Z]
 
-Writes poster-light.svg and poster-dark.svg: paper and black ink, a halftone moon in tonight's
-real phase over Los Angeles, and the ink kid who reads it. The vector art comes from
+Writes poster-light.svg and poster-dark.svg: paper and black ink, the wordmark and the ink kid on
+one ground line, and a halftone moon behind her in tonight's real phase. The vector art comes from
 scripts/art.json (made once from art/mascot.png and Bricolage Grotesque). Standard library only.
 """
 import datetime as dt
@@ -9,18 +9,15 @@ import json
 import math
 import os
 import sys
-from zoneinfo import ZoneInfo
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-LA = ZoneInfo("America/Los_Angeles")
 W, H = 1200, 440
 SYNODIC = 29.530589
 NEW_MOON = dt.datetime(2000, 1, 6, 18, 14, tzinfo=dt.timezone.utc)
 THEMES = {
-    "light": {"paper": "#F1EFEA", "ink": "#111110", "faint": "#8A867E", "grain": (0, 0.6, 0.34)},
-    "dark": {"paper": "#111110", "ink": "#ECE8DF", "faint": "#77736B", "grain": (1, 0.6, 0.28)},
+    "light": {"paper": "#F1EFEA", "ink": "#111110", "grain": (0, 0.6, 0.34)},
+    "dark": {"paper": "#111110", "ink": "#ECE8DF", "grain": (1, 0.6, 0.28)},
 }
-MONO = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
 
 
 def moon(now):
@@ -46,13 +43,11 @@ def poster(theme, art, now):
     t = THEMES[theme]
     wm, m = art["wordmark"], art["mascot"]
     age, lit, name = moon(now)
-    local = now.astimezone(LA)
-    clock = local.strftime("%-I:%M %p").lower()
 
-    # wordmark: 600 wide, baseline 262
+    # wordmark: 740 wide, standing on the same ground line as the kid
     x0, top, x1, _ = wm["bounds"]
-    s = 600 / (x1 - x0)
-    word = f"translate({100 - x0 * s:.2f} 262) scale({s:.5f})"
+    s = 740 / (x1 - x0)
+    word = f"translate({56 - x0 * s:.2f} 414) scale({s:.5f})"
 
     # mascot: 372 tall, feet on the baseline at y 414, centered on x 952
     bx0, by0, bx1, by1 = m["bbox"]
@@ -84,7 +79,7 @@ def poster(theme, art, now):
 
     return f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" aria-label="scryst">
 <title>scryst</title>
-<desc>An ink kid with antennae holds a crystal ball in front of a halftone moon, drawn in tonight's real phase over Los Angeles ({name}, {round(lit * 100)}% lit).</desc>
+<desc>An ink kid with antennae holds a crystal ball in front of a halftone moon, drawn in tonight's real phase ({name}, {round(lit * 100)}% lit).</desc>
 <style>
 .kid{{animation:breathe 4.2s ease-in-out infinite;transform-box:fill-box;transform-origin:50% 100%}}
 @keyframes breathe{{50%{{transform:scale(1.006,1.014)}}}}
@@ -106,17 +101,10 @@ def poster(theme, art, now):
 </filter>
 </defs>
 <rect width="{W}" height="{H}" fill="{t["paper"]}"/>
-<rect width="52" height="{H}" fill="{t["ink"]}"/>
-<text transform="translate(33 {H - 28}) rotate(-90)" font-family="{MONO}" font-size="13" letter-spacing="3" fill="{t["paper"]}">©SCRYST · LOS ANGELES</text>
 <g class="moon"><circle cx="{mcx}" cy="{mcy}" r="{mr}" fill="url(#ht2)"/><path d="{lit_d}" fill="url(#ht)"/>
 <circle cx="{mcx}" cy="{mcy}" r="{mr}" fill="none" stroke="{t["ink"]}" stroke-width="1.5" stroke-dasharray="2 5"/></g>
 <path d="{wm["d"]}" transform="{word}" fill="{t["ink"]}"/>
-<line x1="100" y1="300" x2="700" y2="300" stroke="{t["ink"]}" stroke-width="2"/>
-<g font-family="{MONO}" font-size="15" letter-spacing="1.5" fill="{t["ink"]}">
-<text x="100" y="334">{name.upper()} · {round(lit * 100)}% LIT</text>
-<text x="100" y="360" fill="{t["faint"]}">LOS ANGELES · PRINTED {clock.upper()}</text>
-</g>
-<line x1="760" y1="414" x2="{W - 48}" y2="414" stroke="{t["ink"]}" stroke-width="2"/>
+<line x1="56" y1="416" x2="{W - 56}" y2="416" stroke="{t["ink"]}" stroke-width="3"/>
 <g transform="translate({mx:.2f} {my:.2f}) scale({ms:.5f})" fill="{t["ink"]}">
 <g class="kid"><g fill="{plate}">{part(m["silhouette"])}</g><g fill="{kid_ink}">{part(m["body"])}</g>
 <g>{part(m["antenna_l"])}{sway(m["pivot_l"], 0)}</g>
