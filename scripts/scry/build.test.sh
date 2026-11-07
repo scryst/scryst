@@ -1,6 +1,7 @@
 #!/bin/sh
-# Runs build.sh against stub renderers: a crashed render half must fail the build and leave the
-# banner untouched. Usage: sh scripts/scry/build.test.sh
+# Runs build.sh against stub renderers: a failed render half must fail the build, leave the
+# banner untouched, and leave no frames dir behind. Usage: sh scripts/scry/build.test.sh
+set -u
 src=$(cd "$(dirname "$0")" && pwd)
 t=$(mktemp -d); trap 'rm -rf "$t"' EXIT
 fail=0
@@ -29,8 +30,10 @@ for half in 0 1; do
   echo old > "$t/out/scryst-dark.webp"
   if run $half; then echo "FAIL: build exits 0 when render half $half crashes"; fail=1; fi
   [ "$(cat "$t/out/scryst-dark.webp")" = old ] || { echo "FAIL: half $half crash overwrote the banner"; fail=1; }
+  [ -z "$(ls "$t/tmp")" ] || { echo "FAIL: half $half crash left a frames dir in TMPDIR"; fail=1; rm -rf "$t/tmp"/*; }
 done
 run none || { echo "FAIL: clean build failed"; fail=1; }
 [ "$(cat "$t/out/scryst-dark.webp")" = webp ] || { echo "FAIL: clean build did not write the banner"; fail=1; }
+[ -z "$(ls "$t/tmp")" ] || { echo "FAIL: clean build left a frames dir"; fail=1; }
 [ $fail = 0 ] && echo "ok build.test.sh"
 exit $fail

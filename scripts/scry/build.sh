@@ -7,6 +7,7 @@ set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 out=${1:-"$here/../../banner"}
 frames=$(mktemp -d)
+trap 'rm -rf "$frames"' EXIT
 cd "$here"
 python3 anim.py 1280 448 96 "$frames" 0 2 &
 half0=$!
@@ -20,4 +21,3 @@ cp "$frames/dark.webp" "$out/scryst-dark.webp"
 cp "$frames/plate.webp" "$out/scryst-light.webp"
 cp "$frames/dark000.png" "$out/scryst-dark.png"
 cp "$frames/plate000.png" "$out/scryst-light.png"
-rm -r "$frames"
