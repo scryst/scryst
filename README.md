@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(prefers-color-scheme: dark) and (prefers-reduced-motion: reduce)" srcset="banner/scryst-dark.png">
-    <source media="(prefers-reduced-motion: reduce)" srcset="banner/scryst-light.png">
-    <source media="(prefers-color-scheme: dark)" srcset="banner/scryst-dark.webp">
-    <img src="banner/scryst-light.webp" width="100%" alt="scryst, written in light on the floor of a dark bowl of water. One lamp shines through the surface and each letter is the water moving a different way: a slow swell, a chop, rain, a current, wind, and water gone still.">
+    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="banner/filings-phone-dark.png">
+    <source media="(max-width: 600px)" srcset="banner/filings-phone-light.png">
+    <source media="(prefers-color-scheme: dark)" srcset="banner/filings-dark.png">
+    <img src="banner/filings-light.png" width="100%" alt="scryst, written in iron filings. The dust piles up on a hidden magnet cut in the shape of the word and lines up along its field, which leaves the first letter, curves around the word and comes back in at the last.">
   </picture>
 </p>
