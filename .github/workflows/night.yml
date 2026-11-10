@@ -1,0 +1,33 @@
+name: Night
+
+# Redraws the banner from the contribution calendar twice a day and keeps it as
+# one force-pushed commit on the `night` branch, so main's history stays small.
+on:
+  schedule: [{ cron: "17 8,20 * * *" }]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [scripts/night/**, .github/workflows/night.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  night:
+    runs-on: ubuntu-latest
+    concurrency: night
+    steps:
+      - uses: actions/checkout@v7
+      - run: |
+          python3 -m venv .venv
+          .venv/bin/pip install --quiet numpy pillow scipy
+      - run: .venv/bin/python scripts/night/night.py dist
+        env:
+          GH_TOKEN: ${{ secrets.METRICS_TOKEN || github.token }}
+      - working-directory: dist
+        run: |
+          git init -q -b night
+          git add night-dark.webp night-light.webp night-phone-dark.webp night-phone-light.webp
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -qm "Night $(date -u +%F)"
+          git push -qf "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" night
