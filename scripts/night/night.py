@@ -12,7 +12,10 @@ TW, TH, SKYM, SHOP = 48, 84, 90, 104
 CX, HORIZON, BASE, ROOF = 640.0, 408.0, 440.0, 62.0
 VP = 1110.0
 LAMP = (CX - 4.0, 318.0)
-FEET, FIG_H = (CX - 118.0, BASE + 27.0), 80.0
+PXM = (BASE - ROOF) / (7 * TH + SHOP) * TH / 3.0 / (BASE - HORIZON)
+FEET = (CX - 118.0, 486.0)
+FIG_H = 1.72 * PXM * (FEET[1] - HORIZON)
+ROAD_HALF = 3.2
 THEMES = {
     'dark': dict(page=(13, 17, 23), inks=[(31, 111, 235), (121, 192, 255), (240, 246, 252)], accent=(247, 120, 186)),
     'light': dict(page=(255, 255, 255), inks=[(84, 174, 255), (9, 105, 218), (10, 48, 105)], accent=(191, 57, 137)),
@@ -123,7 +126,7 @@ class Face:
                     for k in range(int(g.integers(2, 5))):
                         cx = x0 - 4 + k * 9
                         wall[py + 2:py + int(g.integers(9, 18)), cx:cx + 7] = g.uniform(.09, .24)
-        wall[top - 6:top, :] = .10
+        wall[top - 6:top, :] = .17
         self.beacons = []
         x = 12
         while x < self.w - 90:
@@ -144,8 +147,8 @@ class Face:
                 if h > 62:
                     self.beacons.append((x, top - 8 - h, g.uniform(0, 1)))
             x += int(g.integers(60, 170))
-        wall[shop:, :] = .04
-        wall[shop:shop + 4, :] = .12
+        wall[shop:, :] = .065
+        wall[shop:shop + 4, :] = .16
         x = 8
         first = True
         while x < self.w - 60:
@@ -156,7 +159,7 @@ class Face:
                 lit[shop + 22:shop + SHOP - 4, x:x + w] = front[:, :max(0, min(w, self.w - x))]
                 wall[shop + 10:shop + 18, max(x - 6, 0):x + w + 6] = .15
             else:
-                wall[shop + 16:shop + SHOP - 3:5, x:x + w] = .08
+                wall[shop + 16:shop + SHOP - 3:5, x:x + w] = .12
             first = False
             x += w + int(g.integers(14, 40))
         self.wall, self.lit = wall, lit
@@ -180,8 +183,8 @@ class Face:
             else:
                 lit[sl] *= 1.0 if ((t + ph) % 1.0) < .62 else .05
         glow = blur(lit, 9) * .55 + blur(lit, 34) * .55
-        T = self.wall * (.62 + 1.5 * self.lampfall + 3.0 * np.clip(glow, 0, .6)) + lit + glow * .20
-        return T * self.air
+        wall = self.wall * (1.15 + 1.5 * self.lampfall + 3.0 * np.clip(glow, 0, .6))
+        return wall * (.55 + .45 * self.air) + (lit + glow * .20) * self.air
 
 
 def homography(src, dst):
@@ -308,17 +311,21 @@ class Scene:
         bodyr = np.zeros((self.right.h, self.right.w), np.float32); bodyr[SKYM - 6:] = 1
         self.cover = np.clip(warp(body, self.ql) + warp(bodyr, self.qr), 0, 1)
         self.masks, self.name_w = name_sign(CX + 24, BASE - 86, 13.0)
+        self.edge = np.clip((W / 2 - np.abs(xx - W / 2) - 4) / 190, 0, 1) ** .7
         self.skyline()
-        self.neon()
         self.figure()
         self.wires()
-        z = Image.new('L', (W * 2, H * 2), 0)
+        z = Image.new('L', (W * 3, H * 3), 0)
         dz = ImageDraw.Draw(z)
-        for i in range(6):
-            y0 = BASE + 12 + i * (13 + i * 2.2)
-            th = 6 + i * 1.6
-            half = 120 + i * 34
-            dz.polygon([((CX - half) * 2, y0 * 2), ((CX + half) * 2, y0 * 2), ((CX + half + 30) * 2, (y0 + th) * 2), ((CX - half - 30) * 2, (y0 + th) * 2)], fill=255)
+        eye = 1 / PXM
+        zc = eye * VP / (FEET[1] - HORIZON)
+        row = lambda d: HORIZON + eye * VP / d
+        col = lambda xm, d: CX + xm * VP / d
+        xm = -ROAD_HALF + .25
+        while xm + .5 <= ROAD_HALF:
+            dz.polygon([(col(xm, zc + 2) * 3, row(zc + 2) * 3), (col(xm + .5, zc + 2) * 3, row(zc + 2) * 3),
+                        (col(xm + .5, zc - 2) * 3, row(zc - 2) * 3), (col(xm, zc - 2) * 3, row(zc - 2) * 3)], fill=255)
+            xm += 1.0
         self.zebra = np.asarray(z.resize((W, H), Image.LANCZOS), np.float32) / 255
 
     def skyline(self):
@@ -349,26 +356,6 @@ class Scene:
         cloud = blur(g.random((H, W)).astype(np.float32), (12, 60))
         cloud = (cloud - cloud.min()) / (cloud.max() - cloud.min())
         self.sky = sky + glow * (.2 + 1.3 * cloud) * (self.yy < HORIZON)
-
-    def neon(self):
-        """Signs with no words: lit boxes hung off both faces, stacked panels where the characters would be. Pink, one white."""
-        P = np.zeros((H, W), np.float32)
-        Wt = np.zeros((H, W), np.float32)
-
-        def box(arr, x, y, w, h, panels):
-            x, y = int(x), int(y)
-            arr[y:y + h, x:x + w] = 1.0
-            ph = h / panels
-            for i in range(1, panels):
-                arr[int(y + i * ph) - 1:int(y + i * ph) + 1, x:x + w] = .15
-            arr[y:y + h, x:x + 1] = .3
-            arr[y:y + h, x + w - 1:x + w] = .3
-
-        box(Wt, CX + 126, BASE - 252, 20, 112, 4)
-        box(Wt, CX + 262, BASE - 190, 11, 58, 3)
-        box(Wt, CX - 182, BASE - 222, 16, 88, 4)
-        box(Wt, CX - 330, BASE - 160, 9, 44, 3)
-        self.neon_p, self.neon_w = P, Wt
 
     def figure(self, sway=0.0):
         """Someone waiting at the crossing under an umbrella, looking up at the block."""
@@ -409,21 +396,17 @@ class Scene:
         dn.rectangle((334 * 2, 218 * 2, 350 * 2, 226 * 2), fill=255)
         for i in range(5):
             dn.rectangle((350 * 2, (164 + i * 17) * 2, 392 * 2, (166 + i * 17) * 2), fill=0)
-        b = pole(d, 1104, 96, 6, [(112, 44)])
         for e in a:
-            run(dn, (-40, e[1] + g.uniform(-30, 50)), e, g.uniform(10, 30), width=7, keep=False)
-        for e, f in zip(a[:4], b):
-            run(dn, e, f, g.uniform(60, 120), width=5)
-        for e, f in zip(a[4:], b):
-            run(dn, e, (f[0], f[1] + 26), g.uniform(90, 140), width=4)
-        for e in b:
-            run(d, e, (W + 30, e[1] + g.uniform(-30, 40)), g.uniform(12, 30))
+            run(dn, (-40, e[1] + g.uniform(-30, 50)), e, g.uniform(10, 30), width=5, keep=False)
+        for e in a[:4]:
+            run(dn, e, (W + 1100, e[1] + g.uniform(-8, 8)), g.uniform(190, 240), width=5)
+        for e in a[4:]:
+            run(dn, e, (W + 1100, e[1] + g.uniform(-8, 8)), g.uniform(210, 260), width=4)
         run(dn, (384, 160), (W + 40, 290), 70, width=4)
-        run(d, (1104, 150), (CX + 40, ROOF + 40), 30, width=2)
         m = np.asarray(im.resize((W, H), Image.LANCZOS), np.float32) / 255
         n = np.asarray(near.resize((W, H), Image.LANCZOS), np.float32) / 255
         soft = blur(n, 2.6)
-        mix = np.clip((self.xx - 420) / 460, 0, 1)
+        mix = np.clip((self.xx - 420) / 460, 0, 1) * .55
         self.occl = np.clip(np.maximum(blur(m, .8), soft * (1 - mix) + blur(n, 1.0) * mix) * 1.15, 0, 1)
         self.near = np.clip(soft * 1.2, 0, 1)
 
@@ -438,7 +421,7 @@ class Scene:
         for i, m in enumerate(self.masks):
             on = 1.0
             if i == 3:
-                ph = (t * 3) % 1.0
+                ph = (t * 3 + .5) % 1.0
                 on = .15 if (ph < .06 or .12 < ph < .16) else 1.0
             A += m * on
         for face, quad in ((self.left, self.ql), (self.right, self.qr)):
@@ -452,7 +435,6 @@ class Scene:
             if ((t * 2 + ph) % 1.0) < .5:
                 A += 1.0 * np.exp(-((xx - bx) ** 2 + (yy - by) ** 2) / 5.0)
         spill = blur(A, 10) * 1.5 + blur(A, 36) * 2.2
-        T += self.neon_w * .62 + blur(self.neon_w, 10) * .45
         lx, ly = LAMP
         r = np.hypot(xx - lx, yy - ly)
         breathe = 1 + .05 * math.sin(3 * w1) + .03 * math.sin(7 * w1 + 1)
@@ -462,6 +444,8 @@ class Scene:
         lamp += .25 * np.exp(-dx / 1.2) * np.exp(-dy / 26)
         cone = (yy > ly) * np.exp(-((xx - lx) / (10 + .55 * np.clip(yy - ly, 0, None))) ** 2) * np.exp(-np.clip(yy - ly, 0, None) / 150) * .20
         T += lamp * (1 + (breathe - 1) * np.exp(-r / 30)) + cone
+        hood = ((np.abs(xx - lx) < 9) & (yy > ly - 11) & (yy < ly - 6)) | ((xx > lx - 1) & (xx < CX + 3) & (yy > ly - 15) & (yy < ly - 10))
+        T *= 1 - .95 * blur(hood.astype(np.float32), .6)
         A_all = A * 1.4 + spill * .8
         src = np.clip(2 * self.kerb - yy, 0, H - 1).astype(int)
         cols = np.arange(W)[None, :].repeat(H, 0)
@@ -473,7 +457,7 @@ class Scene:
         RA = np.stack([np.roll(RA[i], shift[i]) for i in range(H)])
         depth = np.clip((yy - self.kerb) / (H - BASE + 6), 0, 1)
         pool = np.exp(-np.hypot((xx - lx) / 260, (yy - BASE - 30) / 90) ** 2)
-        road = R * .78 * (1 - depth) ** .9 + self.zebra * (.05 + .26 * pool) + .05 * pool
+        road = R * .78 * (1 - depth) ** .9 + self.zebra * (.10 + .30 * pool) + .05 * pool
         T = np.where(self.street, road, T)
         A_all = np.where(self.street, RA * .95 * (1 - depth) ** .8, A_all)
         T += np.exp(-np.abs(yy - self.kerb) / 1.5) * .10 * np.exp(-np.abs(xx - CX) / 420)
@@ -483,16 +467,21 @@ class Scene:
         T += np.clip(self.fig - np.roll(self.fig, -2, 1), 0, 1) * .50 * np.exp(-np.abs(yy - ly - 60) / 90)
         u = (t * 1.0) % 1.0
         if u < .62:
+            kline = (BASE - HORIZON) / VP * 1.08
             for lag in range(22):
-                uu = u - lag * .005
+                uu = u - lag * .0012
                 if uu <= 0:
                     continue
                 e = uu / .62
-                px = 380 + (1330 - 380) * (1 - (1 - e) ** 2.2)
-                py = HORIZON + (CX + VP - px) * .092
-                size = 1.2 + 8 * (1 - e) ** 2
+                px = CX + 70 + (CX + 690 - (CX + 70)) * (1 - (1 - e) ** 2.2)
+                py = HORIZON + (CX + VP - px) * kline
+                m = PXM * (py - HORIZON)
+                half, size = .75 * m, max(.13 * m, .9)
+                on = min(u / .05, 1.0) * (1.0 - lag * .043)
                 for off in (-1, 1):
-                    A_all += (1.0 - lag * .043) * .8 * np.exp(-(((xx - px - off * size * 1.5) / size) ** 2 + ((yy - py) / (size * .45)) ** 2))
+                    spot = np.exp(-(((xx - px - off * half) / size) ** 2 + ((yy - py) / (size * .7)) ** 2))
+                    wet = np.exp(-((xx - px - off * half) / (size * 1.2)) ** 2) * np.exp(-np.clip(yy - py, 0, None) / (2.2 * m)) * (yy > py)
+                    A_all += on * (.9 * spot + .35 * wet)
         air = blur(T, 30) * .085
         T += air
         T *= 1 - .97 * self.occl
@@ -526,14 +515,20 @@ class Plate:
             r[np.argsort(n, axis=None)] = np.arange(n.size) / n.size
             return .80 * tri + .20 * r.reshape(H, W)
         self.s = [screen() for _ in range(4)]
+        n = blur(g.random((H, W)), (.6, 2.2))
+        r = np.empty(n.size)
+        r[np.argsort(n, axis=None)] = np.arange(n.size) / n.size
+        self.fade = r.reshape(H, W)
 
-    def pull(self, T, A):
+    def pull(self, T, A, edge=None):
         """Index image: 0 clear, 1-3 inks from dim to bright, 4 accent."""
         idx = np.zeros((H, W), np.uint8)
         idx[T > .030 + .22 * self.s[0]] = 1
         idx[T > .27 + .36 * self.s[1]] = 2
         idx[T > .70 + .45 * self.s[2]] = 3
         idx[A > .13 + .95 * self.s[3]] = 4
+        if edge is not None:
+            idx[self.fade > edge] = 0
         return idx
 
 
@@ -548,7 +543,7 @@ def main():
     os.makedirs(out, exist_ok=True)
     login = os.environ.get('PROFILE_LOGIN') or os.environ.get('GITHUB_REPOSITORY_OWNER') or 'scryst'
     scene, plate = Scene(levels(calendar(login))), Plate()
-    frames = [plate.pull(*scene.tone(i / N)) for i in range(N)]
+    frames = [plate.pull(*scene.tone(i / N), scene.edge) for i in range(N)]
     for theme in THEMES:
         full = [rgba(f, theme) for f in frames]
         for name, ims in ((f'night-{theme}.webp', full), (f'night-phone-{theme}.webp', [im.crop((PHONE[0], 0, PHONE[1], H)) for im in full])):
