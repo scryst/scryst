@@ -1,7 +1,5 @@
 name: Night
 
-# Redraws the banner from the contribution calendar twice a day and keeps it as
-# one force-pushed commit on the `night` branch, so main's history stays small.
 on:
   schedule: [{ cron: "17 8,20 * * *" }]
   workflow_dispatch:

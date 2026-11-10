@@ -1,31 +1,17 @@
-"""The profile banner: the last year of contributions as a corner tenement at night, in the rain, behind power lines.
-
-Every window is one day. The near corner is now; each face runs back into the past as it recedes: the right face
-is the last half year (this week at the corner), the left face the half year before it. Seven floors are the seven
-weekdays, as on the calendar GitHub draws lower on the page. A day with work has its light on, busy days are bright,
-and today's room is the pink one.
-
-The picture is computed as light only, then printed through a scanline screen in GitHub's own dark-theme blues on a
-transparent sheet. The night in it is the page itself, so nothing is boxed: the block fades into the page at both ends.
-
-Usage: GH_TOKEN=... python3 scripts/night/night.py <out-dir>
-       writes night-{dark,light}.webp and the phone cuts night-phone-{dark,light}.webp
-Needs: numpy, pillow, scipy, and the gh CLI for the one GraphQL read.
-"""
+"""Draws the profile banner from the contribution calendar."""
 import json, math, os, subprocess, sys
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage
 
-PHONE = (250, 1030)                              # the phone cut keeps the pole, the corner and three shop fronts
+PHONE = (250, 1030)
 W, H = 1280, 570
 N, FPS = 84, 12
-TW, TH, SKYM, SHOP = 48, 84, 90, 104          # texture: one day's bay, roof margin, shop floor
-CX, HORIZON, BASE, ROOF = 640.0, 408.0, 440.0, 62.0   # corner edge x, eye level, corner's foot and roof line on the sheet
-VP = 1110.0                                     # distance from the corner to each vanishing point
+TW, TH, SKYM, SHOP = 48, 84, 90, 104
+CX, HORIZON, BASE, ROOF = 640.0, 408.0, 440.0, 62.0
+VP = 1110.0
 LAMP = (CX - 4.0, 318.0)
 THEMES = {
-    # GitHub Primer colours: canvas, three inks from dim to bright, accent
     'dark': dict(page=(13, 17, 23), inks=[(31, 111, 235), (121, 192, 255), (240, 246, 252)], accent=(247, 120, 186)),
     'light': dict(page=(255, 255, 255), inks=[(84, 174, 255), (9, 105, 218), (10, 48, 105)], accent=(191, 57, 137)),
 }
@@ -73,11 +59,11 @@ class Face:
         for c in range(n):
             x = c * TW
             if c % 7 == 3:
-                wall[top:shop, x:x + 3] = .0                              # drain pipe and its shadow
+                wall[top:shop, x:x + 3] = .0
                 wall[top:shop, x + 3:x + 5] *= 1.5
             for j in range(7):
                 y, v = top + j * TH, lv[c, j]
-                wall[y + TH - 6:y + TH - 2, x:x + TW] += .05              # floor slab
+                wall[y + TH - 6:y + TH - 2, x:x + TW] += .05
                 wall[y + TH - 2:y + TH, x:x + TW] *= .4
                 if v < 0:
                     continue
@@ -87,30 +73,30 @@ class Face:
                 if today == (c, j):
                     self.today_pane = (slice(y0, y1), slice(x0, x1))
                     v = max(v, 2)
-                wall[y0 - 3:y1 + 3, x0 - 3:x1 + 3] = .105                 # frame
-                wall[y0:y1, x0:x1] = .010                                 # dark glass
+                wall[y0 - 3:y1 + 3, x0 - 3:x1 + 3] = .105
+                wall[y0:y1, x0:x1] = .010
                 if v == 0:
                     if g.random() < .4:
-                        wall[y0:y0 + int(g.integers(8, 22)), x0:x1] = .045   # a pale reflection
+                        wall[y0:y0 + int(g.integers(8, 22)), x0:x1] = .045
                 else:
                     base = (.0, .30, .54, .80, 1.05)[v] * g.uniform(.85, 1.1)
                     ph, pw = y1 - y0, x1 - x0
                     pane = np.full((ph, pw), base, np.float32)
                     kind = g.random()
-                    if kind < .42:                                        # curtains
+                    if kind < .42:
                         pane *= (.70 + .30 * np.cos(np.arange(pw) * g.uniform(.45, .8) + g.uniform(0, 6)))[None, :]
                         if g.random() < .5:
                             gap = int(g.integers(4, 10))
                             pane[:, pw // 2 - gap:pw // 2 + gap] *= 1.35
-                    elif kind < .66:                                      # blind, part drawn
+                    elif kind < .66:
                         d = int(g.integers(ph // 3, ph))
                         pane[:d:5] *= .45
                         pane[:d] *= .8
-                    else:                                                 # bare room, lamp near the ceiling
+                    else:
                         pane *= (1.2 - .6 * np.linspace(0, 1, ph))[:, None]
-                    pane[:, pw // 2 - 1:pw // 2 + 1] *= .22               # mullions
+                    pane[:, pw // 2 - 1:pw // 2 + 1] *= .22
                     pane[ph // 3 - 1:ph // 3 + 1] *= .30
-                    if v >= 3 and g.random() < .55:                       # someone is up
+                    if v >= 3 and g.random() < .55:
                         px = int(g.integers(4, pw - 12))
                         yy, xx = np.mgrid[0:ph, 0:pw]
                         head = (xx - px - 4) ** 2 + (yy - (ph - 22)) ** 2 < 20
@@ -122,21 +108,20 @@ class Face:
                         self.flick.append(((slice(y0, y1), slice(x0, x1)), g.uniform(0, 1), 'tv'))
                     elif r > .94:
                         self.flick.append(((slice(y0, y1), slice(x0, x1)), g.uniform(0, 1), 'switch'))
-                if wide:                                                  # balcony rail across a wide bay
+                if wide:
                     wall[y1 - 14:y1 + 3:4, x0 - 4:x1 + 4] = .12
                     lit[y1 - 14:y1 + 3:4, x0:x1] *= .3
-                if g.random() < .45:                                      # air conditioner and its stain
+                if g.random() < .45:
                     ax = x1 - 17
                     wall[y1 + 5:y1 + 16, ax:ax + 18] = .13
                     wall[y1 + 7:y1 + 15:2, ax + 2:ax + 16] = .035
                     wall[y1 + 16:min(y1 + 60, shop), ax + 4:ax + 12] *= .55
-                if g.random() < .18:                                      # washing on a pole
+                if g.random() < .18:
                     py = y1 + 6
                     wall[py:py + 2, x0 - 6:x1 + 6] = .13
                     for k in range(int(g.integers(2, 5))):
                         cx = x0 - 4 + k * 9
                         wall[py + 2:py + int(g.integers(9, 18)), cx:cx + 7] = g.uniform(.09, .24)
-        # roof: parapet, tanks, stair heads, aerials
         wall[top - 6:top, :] = .10
         self.beacons = []
         x = 12
@@ -158,7 +143,6 @@ class Face:
                 if h > 62:
                     self.beacons.append((x, top - 8 - h, g.uniform(0, 1)))
             x += int(g.integers(60, 170))
-        # shop floor
         wall[shop:, :] = .04
         wall[shop:shop + 4, :] = .12
         x = 8
@@ -181,7 +165,6 @@ class Face:
         if self.today_pane:
             self.acc[self.today_pane] = np.clip(lit[self.today_pane] * 1.6, .5, 1.3)
             lit[self.today_pane] *= .25
-        # light from the corner lamp falls off along the wall; so does the air
         yy, xx = np.mgrid[0:self.h, 0:self.w].astype(np.float32)
         du = xx if corner == 'l' else self.w - xx
         lamp_v = SKYM + 7 * TH + SHOP - (BASE - LAMP[1]) / ((BASE - ROOF) / (7 * TH + SHOP))
@@ -221,7 +204,7 @@ def warp(tex, quad):
     return np.asarray(a, np.float32) * (1 - far) + np.asarray(b, np.float32) * far
 
 
-NAME = {  # hand-built single-stroke letters, x right, y down, x-height 1
+NAME = {
     's': (.66, [[(.54, .17), (.42, .03), (.22, .02), (.08, .15), (.11, .35), (.30, .49), (.49, .63), (.53, .83), (.40, .97), (.19, .98), (.04, .84)]]),
     'c': (.66, [[(.55, .21), (.42, .04), (.23, .02), (.08, .20), (.04, .50), (.08, .80), (.23, .98), (.42, .96), (.55, .79)]]),
     'r': (.52, [[(.08, .02), (.08, 1.0)], [(.08, .36), (.17, .13), (.31, .03), (.46, .06)]]),
@@ -253,7 +236,7 @@ def name_sign(x, y, xh):
         d = ImageDraw.Draw(im)
         for st in strokes:
             pts = catmull(st)
-            pts = [((cx + (px - .10 * (py - 1)) * xh) * 3, (y + py * xh) * 3) for px, py in pts]   # 6 degree slant
+            pts = [((cx + (px - .10 * (py - 1)) * xh) * 3, (y + py * xh) * 3) for px, py in pts]
             d.line(pts, fill=255, width=6, joint='curve')
             for p in (pts[0], pts[-1]):
                 d.ellipse((p[0] - 3.5, p[1] - 3.5, p[0] + 3.5, p[1] + 3.5), fill=255)
@@ -265,20 +248,19 @@ def name_sign(x, y, xh):
 class Scene:
     def __init__(self, lv, seed=5):
         self.g = np.random.default_rng(seed)
-        self.left = Face(lv[:26], 'r', seed + 1)                 # the half year before: week 0 far left, week 25 at the corner
+        self.left = Face(lv[:26], 'r', seed + 1)
         days = [j for j in range(7) if lv[52, j] >= 0]
-        self.right = Face(lv[26:][::-1], 'l', seed + 2, today=(0, days[-1]))   # the last half year: this week at the corner
-        f = (VP - 690) / VP                                       # how much the far end has shrunk
-        k = (BASE - ROOF) / (7 * TH + SHOP)                       # sheet pixels per texture pixel at the corner
+        self.right = Face(lv[26:][::-1], 'l', seed + 2, today=(0, days[-1]))
+        f = (VP - 690) / VP
+        k = (BASE - ROOF) / (7 * TH + SHOP)
         top = ROOF - SKYM * k
         far_roof, far_base = HORIZON + (top - HORIZON) * f, HORIZON + (BASE - HORIZON) * f
         self.qr = [(CX, top), (CX + 690, far_roof), (CX + 690, far_base), (CX, BASE)]
         self.ql = [(CX - 690, far_roof), (CX, top), (CX, BASE), (CX - 690, far_base)]
         yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
         self.xx, self.yy = xx, yy
-        self.kerb = BASE + (far_base - BASE) * np.abs(xx - CX) / 690       # the foot of the wall at each x
+        self.kerb = BASE + (far_base - BASE) * np.abs(xx - CX) / 690
         self.street = yy > self.kerb
-        # where the block stands (its roof clutter is cut out by its own tone, so use the wall body only)
         body = np.zeros((self.left.h, self.left.w), np.float32); body[SKYM - 6:] = 1
         bodyr = np.zeros((self.right.h, self.right.w), np.float32); bodyr[SKYM - 6:] = 1
         self.cover = np.clip(warp(body, self.ql) + warp(bodyr, self.qr), 0, 1)
@@ -287,7 +269,6 @@ class Scene:
         self.neon()
         self.figure()
         self.wires()
-        # zebra crossing at the corner, in the lamp's pool
         z = Image.new('L', (W * 2, H * 2), 0)
         dz = ImageDraw.Draw(z)
         for i in range(6):
@@ -321,7 +302,7 @@ class Scene:
                     sky[top - h:top, x + w // 2:x + w // 2 + 1] = .07
                     self.far_beacons.append((x + w // 2, top - h - 1, g.uniform(0, 1)))
                 x += w + int(g.integers(-8, 40))
-        glow = np.clip(1 - np.abs(self.yy - (HORIZON - 40)) / 230, 0, 1) ** 2 * .05         # the city's light on low cloud
+        glow = np.clip(1 - np.abs(self.yy - (HORIZON - 40)) / 230, 0, 1) ** 2 * .05
         cloud = blur(g.random((H, W)).astype(np.float32), (12, 60))
         cloud = (cloud - cloud.min()) / (cloud.max() - cloud.min())
         self.sky = sky + glow * (.2 + 1.3 * cloud) * (self.yy < HORIZON)
@@ -340,9 +321,9 @@ class Scene:
             arr[y:y + h, x:x + 1] = .3
             arr[y:y + h, x + w - 1:x + w] = .3
 
-        box(Wt, CX + 126, BASE - 252, 20, 112, 4)       # right face, nearest: the tall one
+        box(Wt, CX + 126, BASE - 252, 20, 112, 4)
         box(Wt, CX + 262, BASE - 190, 11, 58, 3)
-        box(Wt, CX - 182, BASE - 222, 16, 88, 4)        # left face
+        box(Wt, CX - 182, BASE - 222, 16, 88, 4)
         box(Wt, CX - 330, BASE - 160, 9, 44, 3)
         self.neon_p, self.neon_w = P, Wt
 
@@ -350,12 +331,12 @@ class Scene:
         """Someone waiting at the crossing under an umbrella, back to us."""
         im = Image.new('L', (W * 3, H * 3), 0)
         d = ImageDraw.Draw(im)
-        fx, fy = CX - 92, BASE + 20            # feet
+        fx, fy = CX - 92, BASE + 20
         s = 3
-        d.pieslice(((fx - 21) * s, (fy - 64) * s, (fx + 21) * s, (fy - 30) * s), 180, 360, fill=255)       # umbrella
+        d.pieslice(((fx - 21) * s, (fy - 64) * s, (fx + 21) * s, (fy - 30) * s), 180, 360, fill=255)
         d.line((fx * s, (fy - 47) * s, fx * s, (fy - 30) * s), fill=255, width=3)
-        d.ellipse(((fx - 4.5) * s, (fy - 45) * s, (fx + 4.5) * s, (fy - 36) * s), fill=255)                 # head
-        d.polygon([((fx - 6) * s, (fy - 37) * s), ((fx + 6) * s, (fy - 37) * s), ((fx + 9) * s, (fy - 12) * s), ((fx - 9) * s, (fy - 12) * s)], fill=255)   # coat
+        d.ellipse(((fx - 4.5) * s, (fy - 45) * s, (fx + 4.5) * s, (fy - 36) * s), fill=255)
+        d.polygon([((fx - 6) * s, (fy - 37) * s), ((fx + 6) * s, (fy - 37) * s), ((fx + 9) * s, (fy - 12) * s), ((fx - 9) * s, (fy - 12) * s)], fill=255)
         d.rectangle(((fx - 6) * s, (fy - 12) * s, (fx - 1.5) * s, fy * s), fill=255)
         d.rectangle(((fx + 1.5) * s, (fy - 12) * s, (fx + 6) * s, fy * s), fill=255)
         self.fig = np.asarray(im.resize((W, H), Image.LANCZOS), np.float32) / 255
@@ -385,13 +366,12 @@ class Scene:
             if keep:
                 self.runs.append(np.array(pts, np.float32))
 
-        # near pole: close to the lens, heavy, out of focus
         a = pole(dn, 322, -10, 26, [(64, 128), (108, 92)], ins=28)
-        dn.rounded_rectangle((346 * 2, 150 * 2, 396 * 2, 246 * 2), radius=22, fill=255)            # transformer can
+        dn.rounded_rectangle((346 * 2, 150 * 2, 396 * 2, 246 * 2), radius=22, fill=255)
         dn.rectangle((334 * 2, 172 * 2, 350 * 2, 180 * 2), fill=255)
         dn.rectangle((334 * 2, 218 * 2, 350 * 2, 226 * 2), fill=255)
         for i in range(5):
-            dn.rectangle((350 * 2, (164 + i * 17) * 2, 392 * 2, (166 + i * 17) * 2), fill=0)       # cooling fins
+            dn.rectangle((350 * 2, (164 + i * 17) * 2, 392 * 2, (166 + i * 17) * 2), fill=0)
         b = pole(d, 1104, 96, 6, [(112, 44)])
         for e in a:
             run(dn, (-40, e[1] + g.uniform(-30, 50)), e, g.uniform(10, 30), width=7, keep=False)
@@ -402,10 +382,9 @@ class Scene:
         for e in b:
             run(d, e, (W + 30, e[1] + g.uniform(-30, 40)), g.uniform(12, 30))
         run(dn, (384, 160), (W + 40, 290), 70, width=4)
-        run(d, (1104, 150), (CX + 40, ROOF + 40), 30, width=2)                                       # a drop to the block
+        run(d, (1104, 150), (CX + 40, ROOF + 40), 30, width=2)
         m = np.asarray(im.resize((W, H), Image.LANCZOS), np.float32) / 255
         n = np.asarray(near.resize((W, H), Image.LANCZOS), np.float32) / 255
-        # focus falls on the block: the near pole and the first third of its lines are soft
         soft = blur(n, 2.6)
         mix = np.clip((self.xx - 420) / 460, 0, 1)
         self.occl = np.clip(np.maximum(blur(m, .8), soft * (1 - mix) + blur(n, 1.0) * mix) * 1.15, 0, 1)
@@ -418,11 +397,10 @@ class Scene:
         block = warp(self.left.tone(t), self.ql) + warp(self.right.tone(t), self.qr)
         T = self.sky * (1 - self.cover) + block
         A = np.zeros((H, W), np.float32)
-        # accent light: the signs, the name, the beacons
         A += warp(self.right.acc, self.qr) * (1 + .06 * math.sin(5 * w1))
         for i, m in enumerate(self.masks):
             on = 1.0
-            if i == 3:                                             # one tired tube
+            if i == 3:
                 ph = (t * 3) % 1.0
                 on = .15 if (ph < .06 or .12 < ph < .16) else 1.0
             A += m * on
@@ -436,23 +414,20 @@ class Scene:
         for bx, by, ph in self.far_beacons:
             if ((t * 2 + ph) % 1.0) < .5:
                 A += 1.0 * np.exp(-((xx - bx) ** 2 + (yy - by) ** 2) / 5.0)
-        spill = blur(A, 10) * 1.5 + blur(A, 36) * 2.2                 # neon on wet concrete
+        spill = blur(A, 10) * 1.5 + blur(A, 36) * 2.2
         T += self.neon_w * .62 + blur(self.neon_w, 10) * .45
-        # the corner lamp: one hard light, with the glare a wet lens gives it
         lx, ly = LAMP
         r = np.hypot(xx - lx, yy - ly)
         breathe = 1 + .05 * math.sin(3 * w1) + .03 * math.sin(7 * w1 + 1)
         dx, dy = np.abs(xx - lx), np.abs(yy - ly)
         lamp = 2.0 * np.exp(-(r / 6.5) ** 2) + .60 * np.exp(-r / 22) + .16 * np.exp(-r / 110)
-        lamp += 1.1 * np.exp(-dy / 1.3) * np.exp(-dx / 330) + .22 * np.exp(-dy / 5) * np.exp(-dx / 200)      # the long flat streak
+        lamp += 1.1 * np.exp(-dy / 1.3) * np.exp(-dx / 330) + .22 * np.exp(-dy / 5) * np.exp(-dx / 200)
         lamp += .8 * np.exp(-dx / 1.2) * np.exp(-dy / 70) + .4 * np.exp(-(np.abs(dx - dy) / 1.5)) * np.exp(-r / 36)
         cone = (yy > ly) * np.exp(-((xx - lx) / (10 + .55 * np.clip(yy - ly, 0, None))) ** 2) * np.exp(-np.clip(yy - ly, 0, None) / 150) * .20
         T += lamp * (1 + (breathe - 1) * np.exp(-r / 30)) + cone
-        # the one waiting: dark against the shop, with the lamp on one shoulder
         T *= 1 - .96 * self.fig
         T += np.clip(self.fig - np.roll(self.fig, -2, 1), 0, 1) * .55
         A_all = A * 1.4 + spill * .8
-        # wet road: everything above the kerb, upside down beneath it, dragged out and broken by ripples
         src = np.clip(2 * self.kerb - yy, 0, H - 1).astype(int)
         cols = np.arange(W)[None, :].repeat(H, 0)
         R, RA = T[src, cols], A_all[src, cols]
@@ -467,7 +442,6 @@ class Scene:
         T = np.where(self.street, road, T)
         A_all = np.where(self.street, RA * .95 * (1 - depth) ** .8, A_all)
         T += np.exp(-np.abs(yy - self.kerb) / 1.5) * .10 * np.exp(-np.abs(xx - CX) / 420)
-        # the figure's own reflection, and a car leaving down the right-hand street, its tail lights dragged out
         T *= 1 - .7 * np.roll(self.fig[::-1], int(2 * (BASE + 20) - H), 0) * self.street
         u = (t * 1.0) % 1.0
         if u < .62:
@@ -483,17 +457,14 @@ class Scene:
                     A_all += (1.0 - lag * .043) * .8 * np.exp(-(((xx - px - off * size * 1.5) / size) ** 2 + ((yy - py) / (size * .45)) ** 2))
         air = blur(T, 30) * .085
         T += air
-        # the pole and lines in front hide what is behind them and catch the lamp on their upper edge
         T *= 1 - .97 * self.occl
         A_all *= 1 - .97 * self.occl
         T += np.clip(self.occl - np.roll(self.occl, 1, 0), 0, 1) * (.10 + .8 * np.exp(-r / 320))
         T += self.near * (.06 + .16 * np.exp(-r / 380)) + np.clip(self.near - np.roll(self.near, -5, 1), 0, 1) * .75 * np.exp(-r / 520)
-        # signals on the wires: few, small
         for k, pts in enumerate(self.runs[::2]):
             u2 = (t * (1 + k % 2) + k * .29) % 1.0
             x, y = pts[int(u2 * (len(pts) - 1))]
             T += 1.5 * np.exp(-((xx - x) ** 2 + (yy - y) ** 2) / 4.5)
-        # rain, lit where there is light to catch; thick in the lamp's cone
         rain = Image.new('L', (W, H), 0)
         dr = ImageDraw.Draw(rain)
         for _ in range(300):
@@ -509,7 +480,7 @@ class Plate:
     def __init__(self, seed=11):
         g = np.random.default_rng(seed)
         yy = np.arange(H)[:, None] + 0 * np.arange(W)[None, :]
-        tri = np.abs(((yy / 3.0) % 1.0) * 2 - 1)                  # scanlines, 3 px pitch
+        tri = np.abs(((yy / 3.0) % 1.0) * 2 - 1)
 
         def screen():
             n = blur(g.random((H, W)), .5)
