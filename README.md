@@ -1,8 +1,8 @@
 <p align="center">
   <picture>
-    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="banner/filings-phone-dark.png">
-    <source media="(max-width: 600px)" srcset="banner/filings-phone-light.png">
-    <source media="(prefers-color-scheme: dark)" srcset="banner/filings-dark.png">
-    <img src="banner/filings-light.png" width="100%" alt="scryst, written in iron filings. The dust piles up on a hidden magnet cut in the shape of the word and lines up along its field, which leaves the first letter, curves around the word and comes back in at the last.">
+    <source media="(max-width: 600px) and (prefers-color-scheme: dark)" srcset="banner/night-phone-dark.webp">
+    <source media="(max-width: 600px)" srcset="banner/night-phone-light.webp">
+    <source media="(prefers-color-scheme: dark)" srcset="banner/night-dark.webp">
+    <img src="banner/night-light.webp" width="100%" alt="A corner tenement at night in the rain, seen past a utility pole and its power lines. Every window is one day of the last year: seven floors for the days of the week, this week at the corner and the past running back down both streets. A day with work has its light on, the busiest days are brightest with someone at the window, and today's room is the pink one. Someone waits at the crossing under the street lamp, a car's tail lights run down the wet road, and the small neon over the corner shop reads scryst.">
   </picture>
 </p>
