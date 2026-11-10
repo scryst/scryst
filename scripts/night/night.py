@@ -3,6 +3,7 @@ import json, math, os, subprocess, sys
 import numpy as np
 from PIL import Image, ImageDraw
 from scipy import ndimage
+import people
 
 PHONE = (250, 1030)
 W, H = 1280, 570
@@ -11,6 +12,7 @@ TW, TH, SKYM, SHOP = 48, 84, 90, 104
 CX, HORIZON, BASE, ROOF = 640.0, 408.0, 440.0, 62.0
 VP = 1110.0
 LAMP = (CX - 4.0, 318.0)
+FEET, FIG_H = (CX - 118.0, BASE + 27.0), 80.0
 THEMES = {
     'dark': dict(page=(13, 17, 23), inks=[(31, 111, 235), (121, 192, 255), (240, 246, 252)], accent=(247, 120, 186)),
     'light': dict(page=(255, 255, 255), inks=[(84, 174, 255), (9, 105, 218), (10, 48, 105)], accent=(191, 57, 137)),
@@ -56,6 +58,7 @@ class Face:
         mott = (mott - mott.min()) / (mott.max() - mott.min())
         wall[top:] = .050 + .045 * mott[top:]
         self.flick = []
+        recent = []
         for c in range(n):
             x = c * TW
             if c % 7 == 3:
@@ -96,12 +99,10 @@ class Face:
                         pane *= (1.2 - .6 * np.linspace(0, 1, ph))[:, None]
                     pane[:, pw // 2 - 1:pw // 2 + 1] *= .22
                     pane[ph // 3 - 1:ph // 3 + 1] *= .30
-                    if v >= 3 and g.random() < .55:
-                        px = int(g.integers(4, pw - 12))
-                        yy, xx = np.mgrid[0:ph, 0:pw]
-                        head = (xx - px - 4) ** 2 + (yy - (ph - 22)) ** 2 < 20
-                        body = (np.abs(xx - px - 4) < 8 - .0 * yy) & (yy > ph - 17)
-                        pane[head | body] *= .06
+                    if v >= 3 and g.random() < .40:
+                        who, pose = people.bust(pw, ph, g, avoid=recent)
+                        recent = (recent + [pose])[-7:]
+                        pane *= 1 - .86 * blur(who, .6)
                     lit[y0:y1, x0:x1] = pane
                     r = g.random()
                     if v <= 2 and r < .16:
@@ -151,9 +152,7 @@ class Face:
             w = int(g.integers(84, 170))
             at_corner = (corner == 'l' and first) or (corner == 'r' and x + w > self.w - 40)
             if at_corner or g.random() < .3:
-                front = np.full((SHOP - 26, w), g.uniform(.6, 1.0), np.float32)
-                front[:, ::int(g.integers(18, 30))] *= .25
-                front[-int(g.integers(16, 30)):, :] *= .45
+                front = shopfront(g, SHOP - 26, w, at_corner)
                 lit[shop + 22:shop + SHOP - 4, x:x + w] = front[:, :max(0, min(w, self.w - x))]
                 wall[shop + 10:shop + 18, max(x - 6, 0):x + w + 6] = .15
             else:
@@ -245,9 +244,53 @@ def name_sign(x, y, xh):
     return masks, cx - x
 
 
+def shopfront(g, h, w, bright):
+    """What shows through one shop's glass: a store with shelves, a bar behind a door curtain, or a laundry."""
+    kind = 'store' if bright else g.choice(['store', 'bar', 'laundry'], p=[.45, .35, .20])
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    f = np.full((h, w), g.uniform(.75, 1.0) if kind != 'bar' else g.uniform(.30, .45), np.float32)
+    f *= 1.12 - .30 * yy / h
+    if kind == 'store':
+        for k in range(int(w // 44) + 1):
+            x0 = int(8 + k * 44 + g.integers(-3, 4)); x1 = min(x0 + int(g.integers(22, 30)), w - 4)
+            if x1 - x0 < 10:
+                continue
+            for y in range(int(h * .34), h - 14, 11):
+                f[y:y + 2, x0:x1] *= .25
+                x = x0 + 1
+                while x < x1 - 3:
+                    ww, hh = int(g.integers(2, 6)), int(g.integers(4, 9))
+                    f[y - hh:y, x:min(x + ww, x1)] *= g.uniform(.25, .95)
+                    x += ww + int(g.integers(0, 2))
+        f[:int(h * .16), :] *= .55 + .45 * (blur(g.random((int(h * .16), w)).astype(np.float32), (0, 5)) > .5)
+        d = int(w * g.uniform(.35, .6))
+        f[:, d - 1:d + 1] *= .15; f[:, d + 15:d + 17] *= .15; f[int(h * .5):int(h * .5) + 6, d + 3:d + 5] *= .2
+    elif kind == 'bar':
+        d0, d1 = int(w * .30), int(w * .30) + 34
+        f[:, :d0] *= .35; f[:, d1:] *= .35
+        f[:, d0:d1] *= 2.4
+        for k in range(4):
+            f[:int(h * g.uniform(.28, .36)), d0 + 1 + k * 8:d0 + 8 + k * 8] *= .22
+        wx = min(d1 + 14, w - 26)
+        f[int(h * .25):int(h * .50), wx:wx + 20] *= 4.0
+        f[int(h * .25):int(h * .50), wx + 9:wx + 11] *= .3
+    else:
+        for k in range(int((w - 16) // 26)):
+            cx, cy = 20 + k * 26, h * .56
+            rr = np.hypot(xx - cx, yy - cy)
+            f[(rr < 9.5) & (rr > 7)] *= .25
+            f[rr <= 7] *= g.uniform(.45, .8)
+            f[int(h * .28):int(h * .30), cx - 11:cx + 11] *= .3
+        f[int(h * .80):int(h * .86), 6:w - 6] *= .35
+    step = int(g.integers(26, 40))
+    f[:, ::step] *= .22; f[:, 1::step] *= .22
+    f[-int(g.integers(10, 16)):, :] *= .35
+    return f
+
+
 class Scene:
     def __init__(self, lv, seed=5):
-        self.g = np.random.default_rng(seed)
+        g = self.g = np.random.default_rng(seed)
         self.left = Face(lv[:26], 'r', seed + 1)
         days = [j for j in range(7) if lv[52, j] >= 0]
         self.right = Face(lv[26:][::-1], 'l', seed + 2, today=(0, days[-1]))
@@ -327,19 +370,13 @@ class Scene:
         box(Wt, CX - 330, BASE - 160, 9, 44, 3)
         self.neon_p, self.neon_w = P, Wt
 
-    def figure(self):
-        """Someone waiting at the crossing under an umbrella, back to us."""
-        im = Image.new('L', (W * 3, H * 3), 0)
-        d = ImageDraw.Draw(im)
-        fx, fy = CX - 92, BASE + 20
-        s = 3
-        d.pieslice(((fx - 21) * s, (fy - 64) * s, (fx + 21) * s, (fy - 30) * s), 180, 360, fill=255)
-        d.line((fx * s, (fy - 47) * s, fx * s, (fy - 30) * s), fill=255, width=3)
-        d.ellipse(((fx - 4.5) * s, (fy - 45) * s, (fx + 4.5) * s, (fy - 36) * s), fill=255)
-        d.polygon([((fx - 6) * s, (fy - 37) * s), ((fx + 6) * s, (fy - 37) * s), ((fx + 9) * s, (fy - 12) * s), ((fx - 9) * s, (fy - 12) * s)], fill=255)
-        d.rectangle(((fx - 6) * s, (fy - 12) * s, (fx - 1.5) * s, fy * s), fill=255)
-        d.rectangle(((fx + 1.5) * s, (fy - 12) * s, (fx + 6) * s, fy * s), fill=255)
-        self.fig = np.asarray(im.resize((W, H), Image.LANCZOS), np.float32) / 255
+    def figure(self, sway=0.0):
+        """Someone waiting at the crossing under an umbrella, looking up at the block."""
+        m, ax, ay = people.waiting(FIG_H, sway)
+        fig = np.zeros((H, W), np.float32)
+        x0, y0 = int(round(FEET[0] - ax)), int(round(FEET[1] - ay))
+        fig[y0:y0 + m.shape[0], x0:x0 + m.shape[1]] = m[:H - y0]
+        self.fig = fig
 
     def wires(self):
         g = self.g
@@ -421,12 +458,10 @@ class Scene:
         breathe = 1 + .05 * math.sin(3 * w1) + .03 * math.sin(7 * w1 + 1)
         dx, dy = np.abs(xx - lx), np.abs(yy - ly)
         lamp = 2.0 * np.exp(-(r / 6.5) ** 2) + .60 * np.exp(-r / 22) + .16 * np.exp(-r / 110)
-        lamp += 1.1 * np.exp(-dy / 1.3) * np.exp(-dx / 330) + .22 * np.exp(-dy / 5) * np.exp(-dx / 200)
-        lamp += .8 * np.exp(-dx / 1.2) * np.exp(-dy / 70) + .4 * np.exp(-(np.abs(dx - dy) / 1.5)) * np.exp(-r / 36)
+        lamp += .30 * np.exp(-dy / 1.2) * np.exp(-dx / 70) + .10 * np.exp(-dy / 4) * np.exp(-dx / 60)
+        lamp += .25 * np.exp(-dx / 1.2) * np.exp(-dy / 26)
         cone = (yy > ly) * np.exp(-((xx - lx) / (10 + .55 * np.clip(yy - ly, 0, None))) ** 2) * np.exp(-np.clip(yy - ly, 0, None) / 150) * .20
         T += lamp * (1 + (breathe - 1) * np.exp(-r / 30)) + cone
-        T *= 1 - .96 * self.fig
-        T += np.clip(self.fig - np.roll(self.fig, -2, 1), 0, 1) * .55
         A_all = A * 1.4 + spill * .8
         src = np.clip(2 * self.kerb - yy, 0, H - 1).astype(int)
         cols = np.arange(W)[None, :].repeat(H, 0)
@@ -442,7 +477,10 @@ class Scene:
         T = np.where(self.street, road, T)
         A_all = np.where(self.street, RA * .95 * (1 - depth) ** .8, A_all)
         T += np.exp(-np.abs(yy - self.kerb) / 1.5) * .10 * np.exp(-np.abs(xx - CX) / 420)
-        T *= 1 - .7 * np.roll(self.fig[::-1], int(2 * (BASE + 20) - H), 0) * self.street
+        T *= 1 - .7 * ndimage.uniform_filter1d(np.roll(self.fig[::-1], int(2 * FEET[1] - H), 0), 9, axis=0) * self.street
+        T *= 1 - .97 * self.fig
+        A_all *= 1 - .97 * self.fig
+        T += np.clip(self.fig - np.roll(self.fig, -2, 1), 0, 1) * .50 * np.exp(-np.abs(yy - ly - 60) / 90)
         u = (t * 1.0) % 1.0
         if u < .62:
             for lag in range(22):
