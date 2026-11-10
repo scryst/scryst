@@ -147,8 +147,8 @@ class Face:
                 if h > 62:
                     self.beacons.append((x, top - 8 - h, g.uniform(0, 1)))
             x += int(g.integers(60, 170))
-        wall[shop:, :] = .065
-        wall[shop:shop + 4, :] = .16
+        wall[shop:, :] = .095
+        wall[shop:shop + 4, :] = .17
         x = 8
         first = True
         while x < self.w - 60:
@@ -159,7 +159,7 @@ class Face:
                 lit[shop + 22:shop + SHOP - 4, x:x + w] = front[:, :max(0, min(w, self.w - x))]
                 wall[shop + 10:shop + 18, max(x - 6, 0):x + w + 6] = .15
             else:
-                wall[shop + 16:shop + SHOP - 3:5, x:x + w] = .12
+                wall[shop + 16:shop + SHOP - 3:5, x:x + w] = .17
             first = False
             x += w + int(g.integers(14, 40))
         self.wall, self.lit = wall, lit
@@ -310,7 +310,7 @@ class Scene:
         body = np.zeros((self.left.h, self.left.w), np.float32); body[SKYM - 6:] = 1
         bodyr = np.zeros((self.right.h, self.right.w), np.float32); bodyr[SKYM - 6:] = 1
         self.cover = np.clip(warp(body, self.ql) + warp(bodyr, self.qr), 0, 1)
-        self.masks, self.name_w = name_sign(CX + 24, BASE - 86, 13.0)
+        self.masks, self.name_w = name_sign(CX + 24, BASE - 64, 12.0)
         self.edge = np.clip((W / 2 - np.abs(xx - W / 2) - 4) / 190, 0, 1) ** .7
         self.skyline()
         self.figure()
@@ -394,15 +394,18 @@ class Scene:
         dn.rounded_rectangle((346 * 2, 150 * 2, 396 * 2, 246 * 2), radius=22, fill=255)
         dn.rectangle((334 * 2, 172 * 2, 350 * 2, 180 * 2), fill=255)
         dn.rectangle((334 * 2, 218 * 2, 350 * 2, 226 * 2), fill=255)
+        fins = Image.new('L', (W * 2, H * 2), 0)
+        df = ImageDraw.Draw(fins)
         for i in range(5):
-            dn.rectangle((350 * 2, (164 + i * 17) * 2, 392 * 2, (166 + i * 17) * 2), fill=0)
+            df.rectangle((350 * 2, (164 + i * 17) * 2, 392 * 2, (166 + i * 17) * 2), fill=255)
+        self.fins = np.asarray(fins.resize((W, H), Image.LANCZOS), np.float32) / 255
         for e in a:
-            run(dn, (-40, e[1] + g.uniform(-30, 50)), e, g.uniform(10, 30), width=5, keep=False)
+            run(d, (-40, e[1] + g.uniform(-30, 50)), e, g.uniform(10, 30), width=3, keep=False)
         for e in a[:4]:
-            run(dn, e, (W + 1100, e[1] + g.uniform(-8, 8)), g.uniform(190, 240), width=5)
+            run(d, e, (W + 1100, e[1] + g.uniform(-8, 8)), g.uniform(190, 240), width=3)
         for e in a[4:]:
-            run(dn, e, (W + 1100, e[1] + g.uniform(-8, 8)), g.uniform(210, 260), width=4)
-        run(dn, (384, 160), (W + 40, 290), 70, width=4)
+            run(d, e, (W + 1100, e[1] + g.uniform(-8, 8)), g.uniform(210, 260), width=3)
+        run(d, (384, 160), (W + 40, 290), 70, width=3)
         m = np.asarray(im.resize((W, H), Image.LANCZOS), np.float32) / 255
         n = np.asarray(near.resize((W, H), Image.LANCZOS), np.float32) / 255
         soft = blur(n, 2.6)
@@ -488,6 +491,7 @@ class Scene:
         A_all *= 1 - .97 * self.occl
         T += np.clip(self.occl - np.roll(self.occl, 1, 0), 0, 1) * (.10 + .8 * np.exp(-r / 320))
         T += self.near * (.06 + .16 * np.exp(-r / 380)) + np.clip(self.near - np.roll(self.near, -5, 1), 0, 1) * .75 * np.exp(-r / 520)
+        T *= 1 - .6 * blur(self.fins, .8)
         for k, pts in enumerate(self.runs[::2]):
             u2 = (t * (1 + k % 2) + k * .29) % 1.0
             x, y = pts[int(u2 * (len(pts) - 1))]
