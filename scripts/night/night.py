@@ -30,9 +30,9 @@ def calendar(login):
 
 
 def levels(weeks):
-    """53 x 7 array: -1 no such day, 0 nothing, 1-4 by rank among the active days (GitHub's quartile idea)."""
+    """53 x 7 array, newest week last: -1 no such day, 0 nothing, 1-4 by rank among the active days (GitHub's quartile idea)."""
     counts = np.full((53, 7), -1, int)
-    for i, wk in enumerate(weeks):
+    for i, wk in enumerate(weeks, 53 - len(weeks)):
         for day in wk['contributionDays']:
             counts[i, day['weekday']] = day['contributionCount']
     active = np.sort(counts[counts > 0])
