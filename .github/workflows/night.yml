@@ -16,9 +16,11 @@ jobs:
     concurrency: night
     steps:
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false   # the push below uses its own token; keep the write token out of .git/config
       - run: |
           python3 -m venv .venv
-          .venv/bin/pip install --quiet numpy pillow scipy
+          .venv/bin/pip install --quiet -r scripts/night/requirements.txt
       - run: .venv/bin/python scripts/night/night.py dist
         env:
           GH_TOKEN: ${{ secrets.METRICS_TOKEN || github.token }}
