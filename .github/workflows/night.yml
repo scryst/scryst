@@ -20,7 +20,7 @@ jobs:
           persist-credentials: false   # the push below uses its own token; keep the write token out of .git/config
       - run: |
           python3 -m venv .venv
-          .venv/bin/pip install --quiet -r scripts/night/requirements.txt
+          .venv/bin/pip install --quiet numpy pillow scipy
       - run: .venv/bin/python scripts/night/night.py dist
         env:
           GH_TOKEN: ${{ secrets.METRICS_TOKEN || github.token }}
