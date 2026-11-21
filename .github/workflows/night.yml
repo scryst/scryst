@@ -21,6 +21,7 @@ jobs:
       - run: |
           python3 -m venv .venv
           .venv/bin/pip install --quiet numpy pillow scipy
+          .venv/bin/pip freeze
       - run: .venv/bin/python scripts/night/night.py dist
         env:
           GH_TOKEN: ${{ secrets.METRICS_TOKEN || github.token }}
